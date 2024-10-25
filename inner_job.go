@@ -56,7 +56,7 @@ func (j *innerJob) Run() {
 	entry := j.entryGetter.Entry(j.entryID)
 	planAt := entry.Prev
 	nextAt := entry.Next
-	key := fmt.Sprintf("dcron:%s.%s@%d", c.key, j.key, planAt.Unix())
+	key := j.key
 
 	task := Task{
 		Key:        key,
@@ -122,6 +122,8 @@ func (j *innerJob) Run() {
 
 			endAt := time.Now()
 			task.EndAt = &endAt
+
+			j.cron.atomic.UnsetIfExists(ctx, task.Key, c.hostname)
 		} else {
 			task.Missed = true
 			atomic.AddInt64(&j.statistics.MissedTask, 1)

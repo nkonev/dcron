@@ -1,4 +1,4 @@
-module github.com/gochore/dcron
+module github.com/nkonev/dcron
 
 go 1.21.3
 

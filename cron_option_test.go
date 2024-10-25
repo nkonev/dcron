@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gochore/dcron/mock_dcron"
+	"github.com/nkonev/dcron/mock_dcron"
 )
 
 func TestWithHostname(t *testing.T) {

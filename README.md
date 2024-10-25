@@ -1,18 +1,16 @@
 # dcron
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/gochore/dcron.svg)](https://pkg.go.dev/github.com/gochore/dcron)
-[![Actions](https://github.com/gochore/dcron/actions/workflows/test.yaml/badge.svg)](https://github.com/gochore/dcron/actions)
-[![Codecov](https://codecov.io/gh/gochore/dcron/branch/master/graph/badge.svg)](https://codecov.io/gh/gochore/dcron)
-[![Go Report Card](https://goreportcard.com/badge/github.com/gochore/dcron)](https://goreportcard.com/report/github.com/gochore/dcron)
-[![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/gochore/dcron)](https://github.com/gochore/dcron/blob/master/go.mod)
-[![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/gochore/dcron)](https://github.com/gochore/dcron/releases)
+[![Go Reference](https://pkg.go.dev/badge/github.com/nkonev/dcron.svg)](https://pkg.go.dev/github.com/nkonev/dcron)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nkonev/dcron)](https://goreportcard.com/report/github.com/nkonev/dcron)
+[![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/gochore/dcron)](https://github.com/nkonev/dcron/blob/master/go.mod)
+[![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/gochore/dcron)](https://github.com/nkonev/dcron/releases)
 
 A distributed cron framework.
 
 ## Install
 
 ```shell
-go get github.com/gochore/dcron
+go get github.com/nkonev/dcron
 ```
 
 ## Quick Start
@@ -30,6 +28,10 @@ type RedisAtomic struct {
 func (m *RedisAtomic) SetIfNotExists(ctx context.Context, key, value string) bool {
 	ret := m.client.SetNX(ctx, key, value, time.Hour)
 	return ret.Err() == nil && ret.Val()
+}
+
+func (m *RedisAtomic) UnsetIfExists(ctx context.Context, key, value string) {
+	m.client.Del(ctx, key)
 }
 ```
 
@@ -72,13 +74,13 @@ Finally, start the cron:
 
 If you start the program multiple times, you will notice that the cron will run the job once every 15 seconds on only one of the processes.
 
-| process 1                                                              | process 2                                                              | process 3                                                              |
-|------------------------------------------------------------------------|------------------------------------------------------------------------|------------------------------------------------------------------------|
-| 2023/10/13 11:39:45 cron started                                       | 2023/10/13 11:39:47 cron started                                       | 2023/10/13 11:39:48 cron started                                       |
-|                                                                        |                                                                        | 2023/10/13 11:40:00 run: */15 * * * * * dcron:TestCron.Job1@1697168400 |
-|                                                                        | 2023/10/13 11:40:15 run: */15 * * * * * dcron:TestCron.Job1@1697168415 |                                                                        |
-|                                                                        |                                                                        | 2023/10/13 11:40:30 run: */15 * * * * * dcron:TestCron.Job1@1697168430 |
-| 2023/10/13 11:40:45 run: */15 * * * * * dcron:TestCron.Job1@1697168445 |                                                                        |                                                                        |
+| process 1                                      | process 2                                     | process 3                                     |
+|------------------------------------------------|-----------------------------------------------|-----------------------------------------------|
+| 2023/10/13 11:39:45 cron started               | 2023/10/13 11:39:47 cron started              | 2023/10/13 11:39:48 cron started              |
+|                                                |                                               | 2023/10/13 11:40:00 run: */15 * * * * * Job1  |
+|                                                | 2023/10/13 11:40:15 run: */15 * * * * * Job1  |                                               |
+|                                                |                                               | 2023/10/13 11:40:30 run: */15 * * * * * Job1  |
+| 2023/10/13 11:40:45 run: */15 * * * * * Job1   |                                               |                                               |
 
 One more thing, since `dcron.WithAtomic(atomic)` is optional, it's also a good idea to use it as a local cron.
 

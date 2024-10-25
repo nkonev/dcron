@@ -14,4 +14,8 @@ type Atomic interface {
 	// Note that the key/value should be kept for at least one minute.
 	// For example, `SetNX(key, value, time.Minute)` via redis.
 	SetIfNotExists(ctx context.Context, key, value string) bool
+
+	// UnsetIfExists removes the key/value,
+	// or does nothing.
+	UnsetIfExists(ctx context.Context, key, value string)
 }
