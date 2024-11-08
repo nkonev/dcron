@@ -44,7 +44,7 @@ func main() {
 			Addr: "localhost:6379",
 		}),
 	}
-	cron := dcron.NewCron(dcron.WithKey("TestCron"), dcron.WithAtomic(atomic))
+	cron := dcron.NewCron(dcron.WithAtomic(atomic))
 }
 ```
 

@@ -39,37 +39,6 @@ func TestWithHostname(t *testing.T) {
 	}
 }
 
-func TestWithKey(t *testing.T) {
-	type args struct {
-		key string
-	}
-	tests := []struct {
-		name  string
-		args  args
-		check func(t *testing.T, option CronOption)
-	}{
-		{
-			name: "regular",
-			args: args{
-				key: "test_cron",
-			},
-			check: func(t *testing.T, option CronOption) {
-				c := NewCron()
-				option(c)
-				if c.key != "test_cron" {
-					t.Fatal(c.key)
-				}
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := WithKey(tt.args.key)
-			tt.check(t, got)
-		})
-	}
-}
-
 func TestWithAtomic(t *testing.T) {
 	type args struct {
 		atomic Atomic

@@ -13,8 +13,6 @@ import (
 
 // CronMeta is a read only wrapper for Cron.
 type CronMeta interface {
-	// Key returns the unique key of the cron.
-	Key() string
 	// Hostname returns current hostname.
 	Hostname() string
 	// Statistics returns statistics info of the cron's all jobs.
@@ -25,7 +23,6 @@ type CronMeta interface {
 
 // Cron keeps track of any number of jobs, invoking the associated func as specified.
 type Cron struct {
-	key           string
 	hostname      string
 	cron          *cron.Cron
 	atomic        Atomic
@@ -131,11 +128,6 @@ func (c *Cron) Run() {
 		}()
 	}
 	c.cron.Run()
-}
-
-// Key implements CronMeta.Key
-func (c *Cron) Key() string {
-	return c.key
 }
 
 // Hostname implements CronMeta.Hostname

@@ -56,10 +56,3 @@ func WithNoMutex() JobOption {
 		job.noMutex = true
 	}
 }
-
-// WithGroup adds the current job to the group.
-func WithGroup(group Group) JobOption {
-	return func(job *innerJob) {
-		job.group = group
-	}
-}

@@ -33,7 +33,6 @@ type innerJob struct {
 	retryInterval RetryInterval
 	noMutex       bool
 	statistics    Statistics
-	group         Group
 }
 
 // Key implements JobMeta.Key.
@@ -81,15 +80,14 @@ func (j *innerJob) Run() {
 	}
 
 	if !task.Skipped {
+		shouldUseAtomic := func() bool {
+			return !j.noMutex && j.cron.atomic != nil
+		}
 		checkAtomic := func() bool {
-			return j.noMutex || j.cron.atomic == nil || j.cron.atomic.SetIfNotExists(ctx, task.Key, c.hostname)
+			return !shouldUseAtomic() || j.cron.atomic.SetIfNotExists(ctx, task.Key, c.hostname)
 		}
 		needExec := false
-		if j.group != nil {
-			needExec = j.group.inc(planAt, checkAtomic)
-		} else {
-			needExec = checkAtomic()
-		}
+		needExec = checkAtomic()
 
 		if needExec {
 			beginAt := time.Now()
@@ -123,7 +121,9 @@ func (j *innerJob) Run() {
 			endAt := time.Now()
 			task.EndAt = &endAt
 
-			j.cron.atomic.UnsetIfExists(ctx, task.Key, c.hostname)
+			if shouldUseAtomic() {
+				j.cron.atomic.UnsetIfExists(ctx, task.Key, c.hostname)
+			}
 		} else {
 			task.Missed = true
 			atomic.AddInt64(&j.statistics.MissedTask, 1)

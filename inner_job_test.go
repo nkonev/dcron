@@ -3,13 +3,14 @@ package dcron
 import (
 	"context"
 	"errors"
+	"github.com/robfig/cron/v3"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/nkonev/dcron/mock_dcron"
 
-	"go.uber.org/mock/gomock"
+	gomock "github.com/golang/mock/gomock"
 )
 
 func Test_innerJob_Key(t *testing.T) {
@@ -81,6 +82,10 @@ func Test_innerJob_Run(t *testing.T) {
 		DoAndReturn(func(ctx context.Context, key, value string) bool {
 			return value != "always_miss"
 		}).
+		MinTimes(1)
+
+	atomic.EXPECT().
+		UnsetIfExists(gomock.Any(), gomock.Any(), gomock.Any()).
 		MinTimes(1)
 
 	type fields struct {

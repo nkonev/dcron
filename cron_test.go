@@ -2,13 +2,13 @@ package dcron
 
 import (
 	"context"
-	"math/rand"
+	"github.com/robfig/cron/v3"
 	"testing"
 	"time"
 
 	"github.com/nkonev/dcron/mock_dcron"
 
-	"go.uber.org/mock/gomock"
+	gomock "github.com/golang/mock/gomock"
 )
 
 func Test_Cron(t *testing.T) {
@@ -16,11 +16,15 @@ func Test_Cron(t *testing.T) {
 	defer ctrl.Finish()
 	atomic := mock_dcron.NewMockAtomic(ctrl)
 
-	c := NewCron(WithKey("test_cron"), WithAtomic(atomic))
+	c := NewCron(WithAtomic(atomic))
 
 	atomic.EXPECT().
 		SetIfNotExists(gomock.Any(), gomock.Any(), c.Hostname()).
 		Return(true).
+		Times(2)
+
+	atomic.EXPECT().
+		UnsetIfExists(gomock.Any(), gomock.Any(), c.Hostname()).
 		Times(2)
 
 	job := NewJob("test", "*/5 * * * * *", func(ctx context.Context) error {
@@ -56,7 +60,6 @@ func TestCron_AddJobs(t *testing.T) {
 	c := cron.New(cron.WithSeconds())
 
 	type fields struct {
-		key      string
 		hostname string
 		cron     *cron.Cron
 		atomic   Atomic
@@ -165,7 +168,6 @@ func TestCron_AddJobs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Cron{
-				key:      tt.fields.key,
 				hostname: tt.fields.hostname,
 				cron:     tt.fields.cron,
 				atomic:   tt.fields.atomic,
@@ -180,7 +182,6 @@ func TestCron_AddJobs(t *testing.T) {
 
 func TestCron_Hostname(t *testing.T) {
 	type fields struct {
-		key      string
 		hostname string
 		cron     *cron.Cron
 		atomic   Atomic
@@ -202,7 +203,6 @@ func TestCron_Hostname(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Cron{
-				key:      tt.fields.key,
 				hostname: tt.fields.hostname,
 				cron:     tt.fields.cron,
 				atomic:   tt.fields.atomic,
@@ -210,43 +210,6 @@ func TestCron_Hostname(t *testing.T) {
 			}
 			if got := c.Hostname(); got != tt.want {
 				t.Errorf("Hostname() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestCron_Key(t *testing.T) {
-	type fields struct {
-		key      string
-		hostname string
-		cron     *cron.Cron
-		atomic   Atomic
-		jobs     []*innerJob
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		{
-			name: "regular",
-			fields: fields{
-				key: "test_key",
-			},
-			want: "test_key",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &Cron{
-				key:      tt.fields.key,
-				hostname: tt.fields.hostname,
-				cron:     tt.fields.cron,
-				atomic:   tt.fields.atomic,
-				jobs:     tt.fields.jobs,
-			}
-			if got := c.Key(); got != tt.want {
-				t.Errorf("Key() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -275,14 +238,11 @@ func TestNewCron(t *testing.T) {
 		{
 			name: "with_option",
 			args: args{
-				options: []CronOption{WithKey("test_cron")},
+				options: []CronOption{},
 			},
 			check: func(t *testing.T, c *Cron) {
 				if c == nil {
 					t.Fatal(t)
-				}
-				if c.key != "test_cron" {
-					t.Fatal(c.key)
 				}
 			},
 		},
@@ -292,45 +252,5 @@ func TestNewCron(t *testing.T) {
 			got := NewCron(tt.args.options...)
 			tt.check(t, got)
 		})
-	}
-}
-
-func Test_JobWithGroup(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	atomic := mock_dcron.NewMockAtomic(ctrl)
-
-	c := NewCron(WithKey("test_cron"), WithAtomic(atomic))
-
-	atomic.EXPECT().
-		SetIfNotExists(gomock.Any(), gomock.Any(), c.Hostname()).
-		DoAndReturn(func(ctx context.Context, key, value string) bool {
-			time.Sleep(time.Duration(rand.Int63n(int64(time.Millisecond))))
-			return true
-		}).
-		Times(80)
-
-	fn := func(ctx context.Context) error {
-		task, _ := TaskFromContext(ctx)
-		t.Logf("run: %v %v", task.Job.Key(), task.PlanAt.Format(time.RFC3339))
-		return nil
-	}
-
-	g := NewGroup(2)
-	if err := c.AddJobs(
-		NewJob("test1", "* * * * * *", fn, WithGroup(g)),
-		NewJob("test2", "* * * * * *", fn, WithGroup(g)),
-		NewJob("test3", "* * * * * *", fn, WithGroup(g)),
-		NewJob("test4", "* * * * * *", fn, WithGroup(g)),
-	); err != nil {
-		t.Fatal(err)
-	}
-	c.Start()
-	time.Sleep(40 * time.Second)
-	<-c.Stop().Done()
-
-	t.Logf("cron statistics: %+v", c.Statistics())
-	for _, j := range c.Jobs() {
-		t.Logf("job %v statistics: %+v", j.Key(), j.Statistics())
 	}
 }
