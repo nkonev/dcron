@@ -49,10 +49,10 @@ func WithRetryInterval(retryInterval RetryInterval) JobOption {
 	}
 }
 
-// WithNoMutex means the job will run at multiple cron instances,
-// even though the cron has Atomic.
-func WithNoMutex() JobOption {
+// WithNoLock means the job will run at multiple cron instances,
+// even though the cron has Lock.
+func WithNoLock() JobOption {
 	return func(job *innerJob) {
-		job.noMutex = true
+		job.noLock = true
 	}
 }

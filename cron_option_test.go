@@ -39,9 +39,9 @@ func TestWithHostname(t *testing.T) {
 	}
 }
 
-func TestWithAtomic(t *testing.T) {
+func TestWithLock(t *testing.T) {
 	type args struct {
-		atomic Atomic
+		lock Lock
 	}
 	tests := []struct {
 		name  string
@@ -51,20 +51,20 @@ func TestWithAtomic(t *testing.T) {
 		{
 			name: "regular",
 			args: args{
-				atomic: mock_dcron.NewMockAtomic(nil),
+				lock: mock_dcron.NewMockLock(nil),
 			},
 			check: func(t *testing.T, option CronOption) {
 				c := NewCron()
 				option(c)
-				if c.atomic == nil {
-					t.Fatal(c.atomic)
+				if c.lock == nil {
+					t.Fatal(c.lock)
 				}
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithAtomic(tt.args.atomic)
+			got := WithLock(tt.args.lock)
 			tt.check(t, got)
 		})
 	}

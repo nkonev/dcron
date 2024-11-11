@@ -10,7 +10,7 @@ import (
 
 	"github.com/nkonev/dcron/mock_dcron"
 
-	gomock "github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 )
 
 func Test_innerJob_Key(t *testing.T) {
@@ -63,7 +63,7 @@ func Test_innerJob_Run(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockEntryGetter := mock_dcron.NewMockentryGetter(ctrl)
-	atomic := mock_dcron.NewMockAtomic(ctrl)
+	lock := mock_dcron.NewMockLock(ctrl)
 
 	mockEntryGetter.EXPECT().
 		Entry(gomock.Any()).
@@ -77,15 +77,15 @@ func Test_innerJob_Run(t *testing.T) {
 		}).
 		MinTimes(1)
 
-	atomic.EXPECT().
-		SetIfNotExists(gomock.Any(), gomock.Any(), gomock.Any()).
+	lock.EXPECT().
+		Lock(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(ctx context.Context, key, value string) bool {
 			return value != "always_miss"
 		}).
 		MinTimes(1)
 
-	atomic.EXPECT().
-		UnsetIfExists(gomock.Any(), gomock.Any(), gomock.Any()).
+	lock.EXPECT().
+		Unlock(gomock.Any(), gomock.Any(), gomock.Any()).
 		MinTimes(1)
 
 	type fields struct {
@@ -108,7 +108,7 @@ func Test_innerJob_Run(t *testing.T) {
 		{
 			name: "regular",
 			fields: fields{
-				cron:        NewCron(WithAtomic(atomic)),
+				cron:        NewCron(WithLock(lock)),
 				entryID:     1,
 				entryGetter: mockEntryGetter,
 				before: func(task Task) (skip bool) {
@@ -139,7 +139,7 @@ func Test_innerJob_Run(t *testing.T) {
 		{
 			name: "skip",
 			fields: fields{
-				cron:        NewCron(WithAtomic(atomic)),
+				cron:        NewCron(WithLock(lock)),
 				entryID:     1,
 				entryGetter: mockEntryGetter,
 				before: func(task Task) (skip bool) {
@@ -170,7 +170,7 @@ func Test_innerJob_Run(t *testing.T) {
 		{
 			name: "retry",
 			fields: fields{
-				cron:        NewCron(WithAtomic(atomic)),
+				cron:        NewCron(WithLock(lock)),
 				entryID:     5,
 				entryGetter: mockEntryGetter,
 				before: func(task Task) (skip bool) {
@@ -204,7 +204,7 @@ func Test_innerJob_Run(t *testing.T) {
 		{
 			name: "retry with interval",
 			fields: fields{
-				cron:        NewCron(WithAtomic(atomic)),
+				cron:        NewCron(WithLock(lock)),
 				entryID:     5,
 				entryGetter: mockEntryGetter,
 				before: func(task Task) (skip bool) {
@@ -241,7 +241,7 @@ func Test_innerJob_Run(t *testing.T) {
 		{
 			name: "take too long",
 			fields: fields{
-				cron:        NewCron(WithAtomic(atomic)),
+				cron:        NewCron(WithLock(lock)),
 				entryID:     1,
 				entryGetter: mockEntryGetter,
 				before: func(task Task) (skip bool) {
@@ -277,7 +277,7 @@ func Test_innerJob_Run(t *testing.T) {
 		{
 			name: "miss",
 			fields: fields{
-				cron:        NewCron(WithAtomic(atomic), WithHostname("always_miss")),
+				cron:        NewCron(WithLock(lock), WithHostname("always_miss")),
 				entryID:     1,
 				entryGetter: mockEntryGetter,
 				before: func(task Task) (skip bool) {
@@ -308,7 +308,7 @@ func Test_innerJob_Run(t *testing.T) {
 		{
 			name: "panic by calling",
 			fields: fields{
-				cron:        NewCron(WithAtomic(atomic)),
+				cron:        NewCron(WithLock(lock)),
 				entryID:     1,
 				entryGetter: mockEntryGetter,
 				run: func(ctx context.Context) error {
@@ -336,7 +336,7 @@ func Test_innerJob_Run(t *testing.T) {
 		{
 			name: "panic by runtime",
 			fields: fields{
-				cron:        NewCron(WithAtomic(atomic)),
+				cron:        NewCron(WithLock(lock)),
 				entryID:     1,
 				entryGetter: mockEntryGetter,
 				run: func(ctx context.Context) error {

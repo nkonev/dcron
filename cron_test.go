@@ -8,23 +8,23 @@ import (
 
 	"github.com/nkonev/dcron/mock_dcron"
 
-	gomock "github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 )
 
 func Test_Cron(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	atomic := mock_dcron.NewMockAtomic(ctrl)
+	lock := mock_dcron.NewMockLock(ctrl)
 
-	c := NewCron(WithAtomic(atomic))
+	c := NewCron(WithLock(lock))
 
-	atomic.EXPECT().
-		SetIfNotExists(gomock.Any(), gomock.Any(), c.Hostname()).
+	lock.EXPECT().
+		Lock(gomock.Any(), gomock.Any(), c.Hostname()).
 		Return(true).
 		Times(2)
 
-	atomic.EXPECT().
-		UnsetIfExists(gomock.Any(), gomock.Any(), c.Hostname()).
+	lock.EXPECT().
+		Unlock(gomock.Any(), gomock.Any(), c.Hostname()).
 		Times(2)
 
 	job := NewJob("test", "*/5 * * * * *", func(ctx context.Context) error {
@@ -62,7 +62,7 @@ func TestCron_AddJobs(t *testing.T) {
 	type fields struct {
 		hostname string
 		cron     *cron.Cron
-		atomic   Atomic
+		lock     Lock
 		jobs     []*innerJob
 	}
 	type args struct {
@@ -170,7 +170,7 @@ func TestCron_AddJobs(t *testing.T) {
 			c := &Cron{
 				hostname: tt.fields.hostname,
 				cron:     tt.fields.cron,
-				atomic:   tt.fields.atomic,
+				lock:     tt.fields.lock,
 				jobs:     tt.fields.jobs,
 			}
 			if err := c.AddJobs(tt.args.jobs...); (err != nil) != tt.wantErr {
@@ -184,7 +184,7 @@ func TestCron_Hostname(t *testing.T) {
 	type fields struct {
 		hostname string
 		cron     *cron.Cron
-		atomic   Atomic
+		lock     Lock
 		jobs     []*innerJob
 	}
 	tests := []struct {
@@ -205,7 +205,7 @@ func TestCron_Hostname(t *testing.T) {
 			c := &Cron{
 				hostname: tt.fields.hostname,
 				cron:     tt.fields.cron,
-				atomic:   tt.fields.atomic,
+				lock:     tt.fields.lock,
 				jobs:     tt.fields.jobs,
 			}
 			if got := c.Hostname(); got != tt.want {

@@ -141,7 +141,7 @@ func TestWithRetryTimes(t *testing.T) {
 	}
 }
 
-func TestWithNoMutex(t *testing.T) {
+func TestWithNoLock(t *testing.T) {
 	tests := []struct {
 		name  string
 		check func(t *testing.T, option JobOption)
@@ -151,15 +151,15 @@ func TestWithNoMutex(t *testing.T) {
 			check: func(t *testing.T, option JobOption) {
 				j := &innerJob{}
 				option(j)
-				if !j.noMutex {
-					t.Fatal(j.noMutex)
+				if !j.noLock {
+					t.Fatal(j.noLock)
 				}
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithNoMutex()
+			got := WithNoLock()
 			tt.check(t, got)
 		})
 	}

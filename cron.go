@@ -25,7 +25,7 @@ type CronMeta interface {
 type Cron struct {
 	hostname      string
 	cron          *cron.Cron
-	atomic        Atomic
+	lock          Lock
 	jobs          []*innerJob
 	location      *time.Location
 	context       context.Context

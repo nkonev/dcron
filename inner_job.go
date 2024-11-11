@@ -31,7 +31,7 @@ type innerJob struct {
 	after         AfterFunc
 	retryTimes    int
 	retryInterval RetryInterval
-	noMutex       bool
+	noLock        bool
 	statistics    Statistics
 }
 
@@ -80,14 +80,13 @@ func (j *innerJob) Run() {
 	}
 
 	if !task.Skipped {
-		shouldUseAtomic := func() bool {
-			return !j.noMutex && j.cron.atomic != nil
+		shouldUseLock := func() bool {
+			return !j.noLock && j.cron.lock != nil
 		}
-		checkAtomic := func() bool {
-			return !shouldUseAtomic() || j.cron.atomic.SetIfNotExists(ctx, task.Key, c.hostname)
+		shouldExec := func() bool {
+			return !shouldUseLock() || j.cron.lock.Lock(ctx, task.Key, c.hostname)
 		}
-		needExec := false
-		needExec = checkAtomic()
+		needExec := shouldExec()
 
 		if needExec {
 			beginAt := time.Now()
@@ -121,8 +120,8 @@ func (j *innerJob) Run() {
 			endAt := time.Now()
 			task.EndAt = &endAt
 
-			if shouldUseAtomic() {
-				j.cron.atomic.UnsetIfExists(ctx, task.Key, c.hostname)
+			if shouldUseLock() {
+				j.cron.lock.Unlock(ctx, task.Key, c.hostname)
 			}
 		} else {
 			task.Missed = true

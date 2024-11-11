@@ -2,8 +2,8 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/nkonev/dcron.svg)](https://pkg.go.dev/github.com/nkonev/dcron)
 [![Go Report Card](https://goreportcard.com/badge/github.com/nkonev/dcron)](https://goreportcard.com/report/github.com/nkonev/dcron)
-[![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/gochore/dcron)](https://github.com/nkonev/dcron/blob/master/go.mod)
-[![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/gochore/dcron)](https://github.com/nkonev/dcron/releases)
+[![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/nkonev/dcron)](https://github.com/nkonev/dcron/blob/master/go.mod)
+[![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/nkonev/dcron)](https://github.com/nkonev/dcron/tags)
 
 A distributed cron framework.
 
@@ -15,22 +15,22 @@ go get github.com/nkonev/dcron
 
 ## Quick Start
 
-First, implement a distributed atomic operation that only requires support for one method: `SetIfNotExists`.
+First, implement a distributed lock operation that only requires support for two methods: `Lock` and `Unlock`.
 You can implement it in any way you prefer, such as using Redis `SetNX`.
 
 ```go
 import "github.com/redis/go-redis/v9"
 
-type RedisAtomic struct {
+type RedisLock struct {
 	client *redis.Client
 }
 
-func (m *RedisAtomic) SetIfNotExists(ctx context.Context, key, value string) bool {
+func (m *RedisLock) Lock(ctx context.Context, key, value string) bool {
 	ret := m.client.SetNX(ctx, key, value, time.Hour)
 	return ret.Err() == nil && ret.Val()
 }
 
-func (m *RedisAtomic) UnsetIfExists(ctx context.Context, key, value string) {
+func (m *RedisLock) Unlock(ctx context.Context, key, value string) {
 	m.client.Del(ctx, key)
 }
 ```
@@ -39,12 +39,12 @@ Now you can create a cron with that:
 
 ```go
 func main() {
-	atomic := &RedisAtomic{
+	lock := &RedisLock{
 		client: redis.NewClient(&redis.Options{
 			Addr: "localhost:6379",
 		}),
 	}
-	cron := dcron.NewCron(dcron.WithAtomic(atomic))
+	cron := dcron.NewCron(dcron.WithLock(lock))
 }
 ```
 
@@ -82,7 +82,7 @@ If you start the program multiple times, you will notice that the cron will run 
 |                                                |                                               | 2023/10/13 11:40:30 run: */15 * * * * * Job1  |
 | 2023/10/13 11:40:45 run: */15 * * * * * Job1   |                                               |                                               |
 
-One more thing, since `dcron.WithAtomic(atomic)` is optional, it's also a good idea to use it as a local cron.
+One more thing, since `dcron.WithLock(lock)` is optional, it's also a good idea to use it as a local cron.
 
 ```go
 	cron := dcron.NewCron()

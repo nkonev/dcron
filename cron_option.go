@@ -15,10 +15,10 @@ func WithHostname(hostname string) CronOption {
 	}
 }
 
-// WithAtomic uses the provided Atomic.
-func WithAtomic(atomic Atomic) CronOption {
+// WithLock uses the provided Lock.
+func WithLock(lock Lock) CronOption {
 	return func(c *Cron) {
-		c.atomic = atomic
+		c.lock = lock
 	}
 }
 
