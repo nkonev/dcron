@@ -20,6 +20,9 @@ type JobMeta interface {
 	Statistics() Statistics
 }
 
+type spanStarter func(ctx context.Context) (context.Context, any)
+type spanFinisher func(ctx context.Context, span any)
+
 type innerJob struct {
 	cron          *Cron
 	entryID       cron.EntryID
@@ -33,6 +36,8 @@ type innerJob struct {
 	retryInterval RetryInterval
 	noLock        bool
 	statistics    Statistics
+	spanStarter   spanStarter
+	spanFinisher  spanFinisher
 	logger        Logger
 	slogLogger    SlogLogger
 }
@@ -89,6 +94,14 @@ func (j *innerJob) Run() {
 		atomic.AddInt64(&j.statistics.SkippedTask, 1)
 	}
 
+	var span any
+	if j.spanStarter != nil {
+		ctx, span = j.spanStarter(ctx)
+	}
+	if j.spanFinisher != nil {
+		defer j.spanFinisher(ctx, span)
+	}
+
 	if !task.Skipped {
 		shouldUseLock := func() bool {
 			return !j.noLock && j.cron.lock != nil
@@ -136,6 +149,12 @@ func (j *innerJob) Run() {
 				}
 				atomic.AddInt64(&j.statistics.FailedRun, 1)
 				if ctx.Err() != nil {
+					if j.logger != nil {
+						j.logger.Errorf("got error in the context task %v execution: %v", task.Key, ctx.Err())
+					}
+					if j.slogLogger != nil {
+						j.slogLogger.ErrorContext(ctx, "got error in the context", SlogKeyTaskName, task.Key, SlogKeyError, ctx.Err())
+					}
 					break
 				}
 				if j.retryInterval != nil {

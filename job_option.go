@@ -56,3 +56,11 @@ func WithNoLock() JobOption {
 		job.noLock = true
 	}
 }
+
+// WithTracing specifies context modifier. It can be adding a span.
+func WithTracing(ss spanStarter, sf spanFinisher) JobOption {
+	return func(job *innerJob) {
+		job.spanStarter = ss
+		job.spanFinisher = sf
+	}
+}
