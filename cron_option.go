@@ -37,3 +37,10 @@ func WithContext(ctx context.Context) CronOption {
 		c.context, c.contextCancel = context.WithCancel(ctx)
 	}
 }
+
+// WithLog sets the logger interface.
+func WithLog(logger Logger) CronOption {
+	return func(c *Cron) {
+		c.logger = logger
+	}
+}

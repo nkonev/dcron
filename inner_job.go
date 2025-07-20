@@ -33,6 +33,7 @@ type innerJob struct {
 	retryInterval RetryInterval
 	noLock        bool
 	statistics    Statistics
+	logger        Logger
 }
 
 // Key implements JobMeta.Key.
@@ -93,6 +94,10 @@ func (j *innerJob) Run() {
 			task.BeginAt = &beginAt
 
 			for i := 0; i < j.retryTimes; i++ {
+				if j.logger != nil {
+					j.logger.Infof("starting task %v: %v / %v", task.Key, (i + 1), j.retryTimes)
+				}
+
 				task.Return = safeRun(ctx, j.run)
 				atomic.AddInt64(&j.statistics.TotalRun, 1)
 				if i > 0 {
@@ -101,7 +106,14 @@ func (j *innerJob) Run() {
 				task.TriedTimes++
 				if task.Return == nil {
 					atomic.AddInt64(&j.statistics.PassedRun, 1)
+					if j.logger != nil {
+						j.logger.Infof("task %v was finished successfully", task.Key)
+					}
 					break
+				} else {
+					if j.logger != nil {
+						j.logger.Errorf("an error occurred during task %v execution: %v", task.Key, task.Return)
+					}
 				}
 				atomic.AddInt64(&j.statistics.FailedRun, 1)
 				if ctx.Err() != nil {
@@ -112,6 +124,9 @@ func (j *innerJob) Run() {
 					deadline, _ := ctx.Deadline()
 					if -time.Since(deadline) < interval {
 						break
+					}
+					if j.logger != nil {
+						j.logger.Errorf("sleeping % for task %v", interval, task.Key)
 					}
 					time.Sleep(interval)
 				}
@@ -126,6 +141,14 @@ func (j *innerJob) Run() {
 		} else {
 			task.Missed = true
 			atomic.AddInt64(&j.statistics.MissedTask, 1)
+
+			if j.logger != nil {
+				j.logger.Infof("task %v was missed because of lock", task.Key)
+			}
+		}
+	} else {
+		if j.logger != nil {
+			j.logger.Infof("task %v is skipped by beforeFunc", task.Key)
 		}
 	}
 

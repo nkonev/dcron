@@ -21,6 +21,11 @@ type CronMeta interface {
 	Jobs() []JobMeta
 }
 
+type Logger interface {
+	Errorf(msgf string, args ...any)
+	Infof(msgf string, args ...any)
+}
+
 // Cron keeps track of any number of jobs, invoking the associated func as specified.
 type Cron struct {
 	hostname      string
@@ -30,6 +35,7 @@ type Cron struct {
 	location      *time.Location
 	context       context.Context
 	contextCancel context.CancelFunc
+	logger        Logger
 }
 
 // NewCron returns a cron with specified options.
@@ -81,6 +87,7 @@ func (c *Cron) addJob(job Job) error {
 		key:         job.Key(),
 		spec:        job.Spec(),
 		run:         job.Run,
+		logger:      c.logger,
 	}
 
 	for _, option := range job.Options() {
