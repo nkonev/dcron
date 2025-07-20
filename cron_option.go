@@ -38,9 +38,16 @@ func WithContext(ctx context.Context) CronOption {
 	}
 }
 
-// WithLog sets the logger interface.
+// WithLog sets the zap-based logger interface.
 func WithLog(logger Logger) CronOption {
 	return func(c *Cron) {
 		c.logger = logger
+	}
+}
+
+// WithSLog sets the slog-based logger interface.
+func WithSLog(logger SlogLogger) CronOption {
+	return func(c *Cron) {
+		c.slogLogger = logger
 	}
 }

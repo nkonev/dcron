@@ -26,6 +26,11 @@ type Logger interface {
 	Infof(msgf string, args ...any)
 }
 
+type SlogLogger interface {
+	ErrorContext(ctx context.Context, msg string, args ...any)
+	InfoContext(ctx context.Context, msg string, args ...any)
+}
+
 // Cron keeps track of any number of jobs, invoking the associated func as specified.
 type Cron struct {
 	hostname      string
@@ -36,6 +41,7 @@ type Cron struct {
 	context       context.Context
 	contextCancel context.CancelFunc
 	logger        Logger
+	slogLogger    SlogLogger
 }
 
 // NewCron returns a cron with specified options.
@@ -88,6 +94,7 @@ func (c *Cron) addJob(job Job) error {
 		spec:        job.Spec(),
 		run:         job.Run,
 		logger:      c.logger,
+		slogLogger:  c.slogLogger,
 	}
 
 	for _, option := range job.Options() {

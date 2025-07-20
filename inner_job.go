@@ -34,7 +34,16 @@ type innerJob struct {
 	noLock        bool
 	statistics    Statistics
 	logger        Logger
+	slogLogger    SlogLogger
 }
+
+const (
+	SlogKeyTaskName    = "dcron_task_name"
+	SlogKeyAttempt     = "dcron_task_attempt"
+	SlogKeyMaxAttempts = "dcron_task_max_attempts"
+	SlogKeyError       = "dcron_task_error"
+	SlogKeyDuration    = "dcron_sleep_duration"
+)
 
 // Key implements JobMeta.Key.
 func (j *innerJob) Key() string {
@@ -97,6 +106,9 @@ func (j *innerJob) Run() {
 				if j.logger != nil {
 					j.logger.Infof("starting task %v: %v / %v", task.Key, (i + 1), j.retryTimes)
 				}
+				if j.slogLogger != nil {
+					j.slogLogger.InfoContext(ctx, "starting task", SlogKeyTaskName, task.Key, SlogKeyAttempt, (i + 1), SlogKeyMaxAttempts, j.retryTimes)
+				}
 
 				task.Return = safeRun(ctx, j.run)
 				atomic.AddInt64(&j.statistics.TotalRun, 1)
@@ -109,10 +121,17 @@ func (j *innerJob) Run() {
 					if j.logger != nil {
 						j.logger.Infof("task %v was finished successfully", task.Key)
 					}
+					if j.slogLogger != nil {
+						j.slogLogger.InfoContext(ctx, "task was finished successfully", SlogKeyTaskName, task.Key)
+					}
+
 					break
 				} else {
 					if j.logger != nil {
 						j.logger.Errorf("an error occurred during task %v execution: %v", task.Key, task.Return)
+					}
+					if j.slogLogger != nil {
+						j.slogLogger.ErrorContext(ctx, "an error occurred during task execution", SlogKeyTaskName, task.Key, SlogKeyError, task.Return)
 					}
 				}
 				atomic.AddInt64(&j.statistics.FailedRun, 1)
@@ -126,8 +145,12 @@ func (j *innerJob) Run() {
 						break
 					}
 					if j.logger != nil {
-						j.logger.Errorf("sleeping % for task %v", interval, task.Key)
+						j.logger.Infof("sleeping % for task %v before retry", interval, task.Key)
 					}
+					if j.slogLogger != nil {
+						j.slogLogger.InfoContext(ctx, "sleeping before retry", SlogKeyTaskName, task.Key, SlogKeyDuration, interval)
+					}
+
 					time.Sleep(interval)
 				}
 			}
@@ -145,10 +168,16 @@ func (j *innerJob) Run() {
 			if j.logger != nil {
 				j.logger.Infof("task %v was missed because of lock", task.Key)
 			}
+			if j.slogLogger != nil {
+				j.slogLogger.InfoContext(ctx, "task was missed because of lock", SlogKeyTaskName, task.Key)
+			}
 		}
 	} else {
 		if j.logger != nil {
-			j.logger.Infof("task %v is skipped by beforeFunc", task.Key)
+			j.logger.Infof("task %v was skipped by beforeFunc", task.Key)
+		}
+		if j.slogLogger != nil {
+			j.slogLogger.InfoContext(ctx, "task was skipped by beforeFunc", SlogKeyTaskName, task.Key)
 		}
 	}
 
