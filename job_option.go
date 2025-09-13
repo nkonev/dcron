@@ -64,3 +64,17 @@ func WithTracing(ss spanStarter, sf spanFinisher) JobOption {
 		job.spanFinisher = sf
 	}
 }
+
+// WithJobLog sets the classis logger interface.
+func WithJobLog(logger Logger) JobOption {
+	return func(job *innerJob) {
+		job.logger = logger
+	}
+}
+
+// WithJobSLog sets the structured logger interface.
+func WithJobSLog(logger SlogLogger) JobOption {
+	return func(job *innerJob) {
+		job.slogLogger = logger
+	}
+}

@@ -94,3 +94,90 @@ One more thing, since `dcron.WithLock(lock)` is optional, it's also a good idea 
 		log.Fatal(err)
 	}
 ```
+
+## Logging
+
+There is support of classis and structured contextual loggers (slog) via thin `dcron.Logger` and `dcron.SlogLogger` interfaces
+```go
+type Logger interface {
+	Errorf(msgf string, args ...any) // args are args into format string `msgf`
+	Infof(msgf string, args ...any)
+}
+
+type SlogLogger interface {
+	ErrorContext(ctx context.Context, msg string, args ...any) // args are structured attributes
+	InfoContext(ctx context.Context, msg string, args ...any)
+}
+```
+
+To set a custom log level for `dcron` you need to write so-called log adapter:
+```go
+	cron := dcron.NewCron(dcron.WithSLog(&LoggerAdapter{lgr}))
+	job2 := dcron.NewJob("A local job", "*/15 * * * * *", func(ctx context.Context) error {
+		// do something
+		return nil
+	})
+	if err := cron.AddJobs(job2); err != nil {
+		log.Fatal(err)
+	}
+
+	type LoggerAdapter struct {
+		lgr *logger.Logger
+	}
+	
+	func (la *LoggerAdapter) ErrorContext(ctx context.Context, msg string, args ...any) {
+		la.lgr.With(args...).Error(msg)
+	}
+	
+	func (la *LoggerAdapter) InfoContext(ctx context.Context, msg string, args ...any) {
+		la.lgr.With(args...).Debug(msg) // set the desired log level here
+	}
+```
+
+To set a custom log level per specific job
+```go
+	cron := dcron.NewCron()
+	job2 := dcron.NewJob("A local job", "*/15 * * * * *", func(ctx context.Context) error {
+		// do something
+		return nil
+	}, dcron.WithJobSLog(&LoggerAdapter{lgr}))
+	if err := cron.AddJobs(job2); err != nil {
+		log.Fatal(err)
+	}
+
+	type LoggerAdapter struct {
+		lgr *logger.Logger
+	}
+	
+	func (la *LoggerAdapter) ErrorContext(ctx context.Context, msg string, args ...any) {
+		la.lgr.With(args...).Error(msg)
+	}
+	
+	func (la *LoggerAdapter) InfoContext(ctx context.Context, msg string, args ...any) {
+		la.lgr.With(args...).Debug(msg) // set the desired log level here
+	}
+```
+
+Of course, in case when you use zap logger instead of slog, you can write an adapter for its sugared api, which provides structured capabilities:
+```go
+	cron := dcron.NewCron(dcron.WithSLog(&StructuredZapLoggerAdapter{lgr}))
+	job2 := dcron.NewJob("A local job", "*/15 * * * * *", func(ctx context.Context) error {
+		// do something
+		return nil
+	})
+	if err := cron.AddJobs(job2); err != nil {
+		log.Fatal(err)
+	}
+
+type StructuredZapLoggerAdapter struct {
+	lgr *zap.SugaredLogger
+}
+
+func (la *StructuredZapLoggerAdapter) ErrorContext(ctx context.Context, msg string, args ...any) {
+	la.lgr.With(args...).Error(msg)
+}
+
+func (la *StructuredZapLoggerAdapter) InfoContext(ctx context.Context, msg string, args ...any) {
+	la.lgr.With(args...).Info(msg)
+}
+```
