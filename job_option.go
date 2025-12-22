@@ -78,3 +78,10 @@ func WithJobSLog(logger SlogLogger) JobOption {
 		job.slogLogger = logger
 	}
 }
+
+// WithJobSettings sets the settings.
+func WithJobSettings(settings any) JobOption {
+	return func(job *innerJob) {
+		job.settings = settings
+	}
+}

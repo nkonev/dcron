@@ -19,12 +19,12 @@ func Test_Cron(t *testing.T) {
 	c := NewCron(WithLock(lock))
 
 	lock.EXPECT().
-		Lock(gomock.Any(), gomock.Any(), c.Hostname()).
+		Lock(gomock.Any(), gomock.Any(), gomock.Any(), c.Hostname()).
 		Return(true).
 		Times(2)
 
 	lock.EXPECT().
-		Unlock(gomock.Any(), gomock.Any(), c.Hostname()).
+		Unlock(gomock.Any(), gomock.Any(), gomock.Any(), c.Hostname()).
 		Times(2)
 
 	job := NewJob("test", "*/5 * * * * *", func(ctx context.Context) error {

@@ -40,6 +40,7 @@ type innerJob struct {
 	spanFinisher  spanFinisher
 	logger        Logger
 	slogLogger    SlogLogger
+	settings      any
 }
 
 const (
@@ -107,7 +108,7 @@ func (j *innerJob) Run() {
 			return !j.noLock && j.cron.lock != nil
 		}
 		shouldExec := func() bool {
-			return !shouldUseLock() || j.cron.lock.Lock(ctx, task.Key, c.hostname)
+			return !shouldUseLock() || j.cron.lock.Lock(ctx, j.settings, task.Key, c.hostname)
 		}
 		needExec := shouldExec()
 
@@ -178,7 +179,7 @@ func (j *innerJob) Run() {
 			task.EndAt = &endAt
 
 			if shouldUseLock() {
-				j.cron.lock.Unlock(ctx, task.Key, c.hostname)
+				j.cron.lock.Unlock(ctx, j.settings, task.Key, c.hostname)
 			}
 		} else {
 			task.Missed = true

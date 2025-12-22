@@ -78,14 +78,14 @@ func Test_innerJob_Run(t *testing.T) {
 		MinTimes(1)
 
 	lock.EXPECT().
-		Lock(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(ctx context.Context, key, value string) bool {
+		Lock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, jobSettings any, key, value string) bool {
 			return value != "always_miss"
 		}).
 		MinTimes(1)
 
 	lock.EXPECT().
-		Unlock(gomock.Any(), gomock.Any(), gomock.Any()).
+		Unlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		MinTimes(1)
 
 	type fields struct {

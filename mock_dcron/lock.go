@@ -41,27 +41,27 @@ func (m *MockLock) EXPECT() *MockLockMockRecorder {
 }
 
 // Lock mocks base method.
-func (m *MockLock) Lock(ctx context.Context, key, value string) bool {
+func (m *MockLock) Lock(ctx context.Context, jobSetting any, key, value string) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Lock", ctx, key, value)
+	ret := m.ctrl.Call(m, "Lock", ctx, jobSetting, key, value)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // Lock indicates an expected call of Lock.
-func (mr *MockLockMockRecorder) Lock(ctx, key, value any) *gomock.Call {
+func (mr *MockLockMockRecorder) Lock(ctx, jobSetting, key, value any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lock", reflect.TypeOf((*MockLock)(nil).Lock), ctx, key, value)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lock", reflect.TypeOf((*MockLock)(nil).Lock), ctx, jobSetting, key, value)
 }
 
 // Unlock mocks base method.
-func (m *MockLock) Unlock(ctx context.Context, key, value string) {
+func (m *MockLock) Unlock(ctx context.Context, jobSetting any, key, value string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Unlock", ctx, key, value)
+	m.ctrl.Call(m, "Unlock", ctx, jobSetting, key, value)
 }
 
 // Unlock indicates an expected call of Unlock.
-func (mr *MockLockMockRecorder) Unlock(ctx, key, value any) *gomock.Call {
+func (mr *MockLockMockRecorder) Unlock(ctx, jobSetting, key, value any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unlock", reflect.TypeOf((*MockLock)(nil).Unlock), ctx, key, value)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unlock", reflect.TypeOf((*MockLock)(nil).Unlock), ctx, jobSetting, key, value)
 }
