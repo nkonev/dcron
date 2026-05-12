@@ -26,8 +26,11 @@ type innerJob struct {
 	entryGetter   entryGetter
 	key           string
 	spec          string
+	deriveContext DeriveContext
+	ctxBefore     BeforeContextFunc
 	before        BeforeFunc
 	run           RunFunc
+	ctxAfter      AfterContextFunc
 	after         AfterFunc
 	retryTimes    int
 	retryInterval RetryInterval
@@ -75,9 +78,20 @@ func (j *innerJob) Run() {
 	ctx, cancel := context.WithDeadline(context.WithValue(parentCtx, keyContextTask, task), nextAt)
 	defer cancel()
 
-	if j.before != nil && j.before(task) {
-		task.Skipped = true
-		atomic.AddInt64(&j.statistics.SkippedTask, 1)
+	if j.deriveContext != nil {
+		ctx = j.deriveContext(ctx, task)
+	}
+
+	if j.ctxBefore != nil {
+		if j.ctxBefore(ctx, task) {
+			task.Skipped = true
+			atomic.AddInt64(&j.statistics.SkippedTask, 1)
+		}
+	} else if j.before != nil {
+		if j.before(task) {
+			task.Skipped = true
+			atomic.AddInt64(&j.statistics.SkippedTask, 1)
+		}
 	}
 
 	if !task.Skipped {
@@ -128,7 +142,9 @@ func (j *innerJob) Run() {
 		}
 	}
 
-	if j.after != nil {
+	if j.ctxAfter != nil {
+		j.ctxAfter(ctx, task)
+	} else if j.after != nil {
 		j.after(task)
 	}
 
