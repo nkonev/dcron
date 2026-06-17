@@ -3,10 +3,11 @@ package dcron
 import (
 	"context"
 	"errors"
-	"github.com/robfig/cron/v3"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/robfig/cron/v3"
 
 	"github.com/nkonev/dcron/mock_dcron"
 
@@ -94,8 +95,11 @@ func Test_innerJob_Run(t *testing.T) {
 		entryGetter   entryGetter
 		key           string
 		spec          string
+		deriveContext DeriveContext
+		ctxBefore     BeforeContextFunc
 		before        BeforeFunc
 		run           RunFunc
+		ctxAfter      AfterContextFunc
 		after         AfterFunc
 		retryTimes    int
 		retryInterval RetryInterval
@@ -334,6 +338,80 @@ func Test_innerJob_Run(t *testing.T) {
 			},
 		},
 		{
+			name: "ctx_before_skip",
+			fields: fields{
+				cron:        NewCron(WithLock(lock)),
+				entryID:     1,
+				entryGetter: mockEntryGetter,
+				ctxBefore: func(ctx context.Context, task Task) (skip bool) {
+					return true
+				},
+				run: func(ctx context.Context) error {
+					return nil
+				},
+				ctxAfter: func(ctx context.Context, task Task) {
+					if !task.Skipped {
+						t.Fatal("expected task to be skipped")
+					}
+				},
+				retryTimes: 1,
+			},
+			statistics: Statistics{
+				TotalTask:   1,
+				SkippedTask: 1,
+			},
+		},
+		{
+			name: "ctx_before_no_skip",
+			fields: fields{
+				cron:        NewCron(WithLock(lock)),
+				entryID:     1,
+				entryGetter: mockEntryGetter,
+				ctxBefore: func(ctx context.Context, task Task) (skip bool) {
+					return false
+				},
+				run: func(ctx context.Context) error {
+					return nil
+				},
+				ctxAfter: func(ctx context.Context, task Task) {
+					if task.Return != nil {
+						t.Fatal(task.Return)
+					}
+				},
+				retryTimes: 1,
+			},
+			statistics: Statistics{
+				TotalTask:  1,
+				PassedTask: 1,
+				TotalRun:   1,
+				PassedRun:  1,
+			},
+		},
+		{
+			name: "derive_context",
+			fields: fields{
+				cron:        NewCron(WithLock(lock)),
+				entryID:     1,
+				entryGetter: mockEntryGetter,
+				deriveContext: func(ctx context.Context, task Task) context.Context {
+					return context.WithValue(ctx, ctxKey("test_key"), "test_value")
+				},
+				run: func(ctx context.Context) error {
+					if ctx.Value(ctxKey("test_key")) != "test_value" {
+						return errors.New("context value not found")
+					}
+					return nil
+				},
+				retryTimes: 1,
+			},
+			statistics: Statistics{
+				TotalTask:  1,
+				PassedTask: 1,
+				TotalRun:   1,
+				PassedRun:  1,
+			},
+		},
+		{
 			name: "panic by runtime",
 			fields: fields{
 				cron:        NewCron(WithLock(lock)),
@@ -374,8 +452,11 @@ func Test_innerJob_Run(t *testing.T) {
 				entryGetter:   tt.fields.entryGetter,
 				key:           tt.fields.key,
 				spec:          tt.fields.spec,
+				deriveContext: tt.fields.deriveContext,
+				ctxBefore:     tt.fields.ctxBefore,
 				before:        tt.fields.before,
 				run:           tt.fields.run,
+				ctxAfter:      tt.fields.ctxAfter,
 				after:         tt.fields.after,
 				retryTimes:    tt.fields.retryTimes,
 				retryInterval: tt.fields.retryInterval,
