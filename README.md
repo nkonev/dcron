@@ -234,3 +234,27 @@ Finally, start the cron:
 	time.Sleep(time.Minute)
 	<-cron.Stop().Done()
 ```
+
+## OTeL Tracing
+
+```go
+	import (
+		otelTrace "github.com/nkonev/dcron/plugin/trace/otel"
+		"go.opentelemetry.io/otel"
+	)
+
+	cron := dcron.NewCron()
+	job2 := dcron.NewJob("A local job", "*/15 * * * * *", func(ctx context.Context) error {
+		// do something
+		return nil
+	}, otelTrace.WithTracing(otel.Tracer("scheduler/a-local-job"), "aLocalJobSpan"))
+	if err := cron.AddJobs(job2); err != nil {
+		log.Fatal(err)
+	}
+
+	cron.Start()
+	log.Info("cron started")
+	time.Sleep(time.Minute)
+	<-cron.Stop().Done()
+
+```
