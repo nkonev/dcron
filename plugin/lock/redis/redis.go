@@ -14,14 +14,8 @@ type RedisLock struct {
 	slogLogger dcron.SlogLogger
 }
 
-type RedisLockJobSettings struct {
-	duration time.Duration
-}
-
 func WithLockTTL(duration time.Duration) dcron.JobOption {
-	return dcron.WithJobSettings(&RedisLockJobSettings{
-		duration: duration,
-	})
+	return dcron.WithJobSettings(duration)
 }
 
 func WithLock(redisClient *redisV9.Client, options ...RedisLockOption) dcron.CronOption {
@@ -29,19 +23,19 @@ func WithLock(redisClient *redisV9.Client, options ...RedisLockOption) dcron.Cro
 }
 
 func (m *RedisLock) Lock(ctx context.Context, jobSettings any, key, value string) bool {
-	js, ok := jobSettings.(*RedisLockJobSettings)
+	duration, ok := jobSettings.(time.Duration)
 	if !ok {
 		if m.logger != nil {
-			m.logger.Errorf("unable to cast to *RedisLockJobSettings %v", key)
+			m.logger.Errorf("unable to cast to time.Duration %v", key)
 		}
 		if m.slogLogger != nil {
-			m.slogLogger.ErrorContext(ctx, "unable to cast to *RedisLockJobSettings", dcron.SlogKeyTaskName, key)
+			m.slogLogger.ErrorContext(ctx, "unable to cast to time.Duration", dcron.SlogKeyTaskName, key)
 		}
 
 		return false
 	}
 
-	if js.duration == 0 {
+	if duration == 0 {
 		if m.logger != nil {
 			m.logger.Errorf("bad zero expiration %v", key)
 		}
@@ -51,7 +45,7 @@ func (m *RedisLock) Lock(ctx context.Context, jobSettings any, key, value string
 		return false
 	}
 
-	locked, err := m.client.SetNX(ctx, key, value, js.duration).Result()
+	locked, err := m.client.SetNX(ctx, key, value, duration).Result()
 	if err != nil {
 		if m.logger != nil {
 			m.logger.Errorf("unable to take redis lock %v: %v", key, err)
