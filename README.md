@@ -181,3 +181,56 @@ func (la *StructuredZapLoggerAdapter) InfoContext(ctx context.Context, msg strin
 	la.lgr.With(args...).Info(msg)
 }
 ```
+
+# Plugins
+## Redis lock
+
+There is already implemented RedisLock:
+
+
+Now you can create a cron with that:
+
+```go
+import (
+	redisLock "github.com/nkonev/dcron/plugin/lock/redis"
+	redisV9 "github.com/redis/go-redis/v9"
+	"log/slog"
+)
+
+func main() {
+	redisClient := redisV9.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
+	
+	lgr := slog.Default()
+	
+	cron := dcron.NewCron(
+		redisLock.WithLock(redisClient, redisLock.WithSLog(lgr)),
+		dcron.WithSLog(lgr),
+	)
+}
+```
+
+Then, create a job and add it to the cron.
+
+```go
+	job1 := dcron.NewJob("Job1", "*/15 * * * * *", func(ctx context.Context) error {
+		if task, ok := dcron.TaskFromContext(ctx); ok {
+			lgr.InfoContext(ctx, "run:", "dcron_task_spec", task.Job.Spec(), dcron.SlogKeyTaskName, task.Key)
+		}
+		// do something
+		return nil
+	}, redisLock.WithLockTTL(time.Minute))
+	if err := cron.AddJobs(job1); err != nil {
+		panic(err)
+	}
+```
+
+Finally, start the cron:
+
+```go
+	cron.Start()
+	lgr.Info("cron started")
+	time.Sleep(time.Minute)
+	<-cron.Stop().Done()
+```
