@@ -2,9 +2,10 @@ package dcron
 
 import (
 	"context"
-	"github.com/robfig/cron/v3"
 	"testing"
 	"time"
+
+	"github.com/robfig/cron/v3"
 
 	"github.com/nkonev/dcron/mock_dcron"
 
@@ -36,10 +37,10 @@ func Test_Cron(t *testing.T) {
 			t.Logf("run: %+v", task)
 		}
 		return nil
-	}, WithBeforeFunc(func(task Task) (skip bool) {
+	}, WithBeforeContextFunc(func(ctx context.Context, task Task) (skip bool) {
 		t.Logf("before: %+v", task)
 		return false
-	}), WithAfterFunc(func(task Task) {
+	}), WithAfterContextFunc(func(ctx context.Context, task Task) {
 		t.Logf("after: %+v", task)
 	}))
 	if err := c.AddJobs(job); err != nil {

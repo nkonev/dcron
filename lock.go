@@ -2,8 +2,8 @@ package dcron
 
 import "context"
 
-//go:generate go get go.uber.org/mock/mockgen@v0.5.0
-//go:generate go run go.uber.org/mock/mockgen@v0.5.0 -source=lock.go -destination mock_dcron/lock.go
+//go:generate go get go.uber.org/mock/mockgen@v0.6.0
+//go:generate go run go.uber.org/mock/mockgen@v0.6.0 -source=lock.go -destination mock_dcron/lock.go
 //go:generate go mod tidy
 
 // Lock provides distributed lock operation for dcron,

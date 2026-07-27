@@ -8,10 +8,10 @@ import (
 )
 
 func TestWithAfterFunc(t *testing.T) {
-	after := func(task Task) {}
+	ctxAfter := func(ctx context.Context, task Task) {}
 
 	type args struct {
-		after AfterFunc
+		ctxAfter AfterContextFunc
 	}
 	tests := []struct {
 		name  string
@@ -21,12 +21,12 @@ func TestWithAfterFunc(t *testing.T) {
 		{
 			name: "regular",
 			args: args{
-				after: after,
+				ctxAfter: ctxAfter,
 			},
 			check: func(t *testing.T, option JobOption) {
 				j := &innerJob{}
 				option(j)
-				if fmt.Sprintf("%p", j.after) != fmt.Sprintf("%p", after) {
+				if fmt.Sprintf("%p", j.ctxAfter) != fmt.Sprintf("%p", ctxAfter) {
 					t.Fatal()
 				}
 			},
@@ -34,19 +34,19 @@ func TestWithAfterFunc(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithAfterFunc(tt.args.after)
+			got := WithAfterContextFunc(tt.args.ctxAfter)
 			tt.check(t, got)
 		})
 	}
 }
 
 func TestWithBeforeFunc(t *testing.T) {
-	before := func(task Task) (skip bool) {
+	ctxBefore := func(ctx context.Context, task Task) (skip bool) {
 		return false
 	}
 
 	type args struct {
-		before BeforeFunc
+		ctxBefore BeforeContextFunc
 	}
 	tests := []struct {
 		name  string
@@ -56,12 +56,12 @@ func TestWithBeforeFunc(t *testing.T) {
 		{
 			name: "regular",
 			args: args{
-				before: before,
+				ctxBefore: ctxBefore,
 			},
 			check: func(t *testing.T, option JobOption) {
 				j := &innerJob{}
 				option(j)
-				if fmt.Sprintf("%p", j.before) != fmt.Sprintf("%p", before) {
+				if fmt.Sprintf("%p", j.ctxBefore) != fmt.Sprintf("%p", ctxBefore) {
 					t.Fatal()
 				}
 			},
@@ -69,7 +69,7 @@ func TestWithBeforeFunc(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithBeforeFunc(tt.args.before)
+			got := WithBeforeContextFunc(tt.args.ctxBefore)
 			tt.check(t, got)
 		})
 	}

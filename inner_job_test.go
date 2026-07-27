@@ -20,9 +20,9 @@ func Test_innerJob_Key(t *testing.T) {
 		entryID       cron.EntryID
 		key           string
 		spec          string
-		before        BeforeFunc
+		before        BeforeContextFunc
 		run           RunFunc
-		after         AfterFunc
+		after         AfterContextFunc
 		retryTimes    int
 		retryInterval RetryInterval
 	}
@@ -46,9 +46,9 @@ func Test_innerJob_Key(t *testing.T) {
 				entryID:       tt.fields.entryID,
 				key:           tt.fields.key,
 				spec:          tt.fields.spec,
-				before:        tt.fields.before,
+				ctxBefore:     tt.fields.before,
 				run:           tt.fields.run,
-				after:         tt.fields.after,
+				ctxAfter:      tt.fields.after,
 				retryTimes:    tt.fields.retryTimes,
 				retryInterval: tt.fields.retryInterval,
 			}
@@ -97,10 +97,8 @@ func Test_innerJob_Run(t *testing.T) {
 		spec          string
 		deriveContext DeriveContext
 		ctxBefore     BeforeContextFunc
-		before        BeforeFunc
 		run           RunFunc
 		ctxAfter      AfterContextFunc
-		after         AfterFunc
 		retryTimes    int
 		retryInterval RetryInterval
 	}
@@ -115,13 +113,13 @@ func Test_innerJob_Run(t *testing.T) {
 				cron:        NewCron(WithLock(lock)),
 				entryID:     1,
 				entryGetter: mockEntryGetter,
-				before: func(task Task) (skip bool) {
+				ctxBefore: func(ctx context.Context, task Task) (skip bool) {
 					return false
 				},
 				run: func(ctx context.Context) error {
 					return nil
 				},
-				after: func(task Task) {
+				ctxAfter: func(ctx context.Context, task Task) {
 					if task.Return != nil {
 						t.Fatal(task.Return)
 					}
@@ -146,13 +144,13 @@ func Test_innerJob_Run(t *testing.T) {
 				cron:        NewCron(WithLock(lock)),
 				entryID:     1,
 				entryGetter: mockEntryGetter,
-				before: func(task Task) (skip bool) {
+				ctxBefore: func(ctx context.Context, task Task) (skip bool) {
 					return true
 				},
 				run: func(ctx context.Context) error {
 					return nil
 				},
-				after: func(task Task) {
+				ctxAfter: func(ctx context.Context, task Task) {
 					if !task.Skipped {
 						t.Fatal(task.Skipped)
 					}
@@ -177,13 +175,13 @@ func Test_innerJob_Run(t *testing.T) {
 				cron:        NewCron(WithLock(lock)),
 				entryID:     5,
 				entryGetter: mockEntryGetter,
-				before: func(task Task) (skip bool) {
+				ctxBefore: func(ctx context.Context, task Task) (skip bool) {
 					return false
 				},
 				run: func(ctx context.Context) error {
 					return errors.New("show retry")
 				},
-				after: func(task Task) {
+				ctxAfter: func(ctx context.Context, task Task) {
 					if task.Return == nil {
 						t.Fatal(task.Return)
 					}
@@ -211,13 +209,13 @@ func Test_innerJob_Run(t *testing.T) {
 				cron:        NewCron(WithLock(lock)),
 				entryID:     5,
 				entryGetter: mockEntryGetter,
-				before: func(task Task) (skip bool) {
+				ctxBefore: func(ctx context.Context, task Task) (skip bool) {
 					return false
 				},
 				run: func(ctx context.Context) error {
 					return errors.New("should retry")
 				},
-				after: func(task Task) {
+				ctxAfter: func(ctx context.Context, task Task) {
 					if task.Return == nil {
 						t.Fatal(task.Return)
 					}
@@ -248,14 +246,14 @@ func Test_innerJob_Run(t *testing.T) {
 				cron:        NewCron(WithLock(lock)),
 				entryID:     1,
 				entryGetter: mockEntryGetter,
-				before: func(task Task) (skip bool) {
+				ctxBefore: func(ctx context.Context, task Task) (skip bool) {
 					return false
 				},
 				run: func(ctx context.Context) error {
 					time.Sleep(2 * time.Second)
 					return errors.New("show retry")
 				},
-				after: func(task Task) {
+				ctxAfter: func(ctx context.Context, task Task) {
 					if task.TriedTimes != 1 {
 						t.Fatal(task.TriedTimes)
 					}
@@ -284,13 +282,13 @@ func Test_innerJob_Run(t *testing.T) {
 				cron:        NewCron(WithLock(lock), WithHostname("always_miss")),
 				entryID:     1,
 				entryGetter: mockEntryGetter,
-				before: func(task Task) (skip bool) {
+				ctxBefore: func(ctx context.Context, task Task) (skip bool) {
 					return false
 				},
 				run: func(ctx context.Context) error {
 					return nil
 				},
-				after: func(task Task) {
+				ctxAfter: func(ctx context.Context, task Task) {
 					if !task.Missed {
 						t.Fatal(task.Missed)
 					}
@@ -318,7 +316,7 @@ func Test_innerJob_Run(t *testing.T) {
 				run: func(ctx context.Context) error {
 					panic("not happy")
 				},
-				after: func(task Task) {
+				ctxAfter: func(ctx context.Context, task Task) {
 					if !strings.Contains(task.Return.Error(), "not happy") {
 						t.Fatal(task.Return)
 					}
@@ -424,7 +422,7 @@ func Test_innerJob_Run(t *testing.T) {
 					ctx.Value("test")
 					return nil
 				},
-				after: func(task Task) {
+				ctxAfter: func(ctx context.Context, task Task) {
 					if !strings.Contains(task.Return.Error(), "runtime error: invalid memory address or nil pointer dereference") {
 						t.Fatal(task.Return)
 					}
@@ -454,10 +452,8 @@ func Test_innerJob_Run(t *testing.T) {
 				spec:          tt.fields.spec,
 				deriveContext: tt.fields.deriveContext,
 				ctxBefore:     tt.fields.ctxBefore,
-				before:        tt.fields.before,
 				run:           tt.fields.run,
 				ctxAfter:      tt.fields.ctxAfter,
-				after:         tt.fields.after,
 				retryTimes:    tt.fields.retryTimes,
 				retryInterval: tt.fields.retryInterval,
 			}
@@ -475,9 +471,9 @@ func Test_innerJob_Spec(t *testing.T) {
 		entryID       cron.EntryID
 		key           string
 		spec          string
-		before        BeforeFunc
+		ctxBefore     BeforeContextFunc
 		run           RunFunc
-		after         AfterFunc
+		ctxAfter      AfterContextFunc
 		retryTimes    int
 		retryInterval RetryInterval
 	}
@@ -501,9 +497,9 @@ func Test_innerJob_Spec(t *testing.T) {
 				entryID:       tt.fields.entryID,
 				key:           tt.fields.key,
 				spec:          tt.fields.spec,
-				before:        tt.fields.before,
+				ctxBefore:     tt.fields.ctxBefore,
 				run:           tt.fields.run,
-				after:         tt.fields.after,
+				ctxAfter:      tt.fields.ctxAfter,
 				retryTimes:    tt.fields.retryTimes,
 				retryInterval: tt.fields.retryInterval,
 			}
