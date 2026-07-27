@@ -111,13 +111,24 @@ func (j *innerJob) Run() {
 	}
 
 	if !task.Skipped {
+		var lockValue any
+		var lockTaken bool
+
 		shouldUseLock := func() bool {
 			return !j.noLock && j.cron.lock != nil
 		}
 		shouldExec := func() bool {
-			return !shouldUseLock() || j.cron.lock.Lock(ctx, j.settings, task.Key, c.hostname)
+			if !shouldUseLock() {
+				return true
+			}
+
+			lockTaken, lockValue = j.cron.lock.Lock(ctx, j.settings, task.Key, c.hostname)
+			return lockTaken
 		}
 		needExec := shouldExec()
+		if lockTaken {
+			defer j.cron.lock.Unlock(ctx, j.settings, task.Key, c.hostname, lockValue)
+		}
 
 		if needExec {
 			beginAt := time.Now()
@@ -146,7 +157,7 @@ func (j *innerJob) Run() {
 						j.slogLogger.InfoContext(ctx, "task was finished successfully", SlogKeyTaskName, task.Key)
 					}
 
-					break
+					break // prevents incrementing FailedRun
 				} else {
 					if j.logger != nil {
 						j.logger.Errorf("an error occurred during task %v execution: %v", task.Key, task.Return)
@@ -184,10 +195,6 @@ func (j *innerJob) Run() {
 
 			endAt := time.Now()
 			task.EndAt = &endAt
-
-			if shouldUseLock() {
-				j.cron.lock.Unlock(ctx, j.settings, task.Key, c.hostname)
-			}
 		} else {
 			task.Missed = true
 			atomic.AddInt64(&j.statistics.MissedTask, 1)

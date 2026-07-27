@@ -21,11 +21,11 @@ func Test_Cron(t *testing.T) {
 
 	lock.EXPECT().
 		Lock(gomock.Any(), gomock.Any(), gomock.Any(), c.Hostname()).
-		Return(true).
+		Return(true, nil).
 		Times(2)
 
 	lock.EXPECT().
-		Unlock(gomock.Any(), gomock.Any(), gomock.Any(), c.Hostname()).
+		Unlock(gomock.Any(), gomock.Any(), gomock.Any(), c.Hostname(), gomock.Any()).
 		Times(2)
 
 	job := NewJob("test", "*/5 * * * * *", func(ctx context.Context) error {

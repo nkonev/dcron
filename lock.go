@@ -13,9 +13,9 @@ type Lock interface {
 	// or does nothing and return false.
 	// Note that the key/value should be kept for at least one minute.
 	// For example, `SetNX(key, value, time.Minute)` via redis.
-	Lock(ctx context.Context, jobSetting any, key, value string) bool
+	Lock(ctx context.Context, jobSetting any, key, value string) (bool, any)
 
 	// Unlock removes the key/value,
 	// or does nothing.
-	Unlock(ctx context.Context, jobSetting any, key, value string)
+	Unlock(ctx context.Context, jobSetting any, key, value string, lockValue any)
 }
