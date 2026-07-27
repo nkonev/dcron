@@ -2,8 +2,9 @@ package redis
 
 import (
 	"context"
-	redisV9 "github.com/redis/go-redis/v9"
 	"time"
+
+	redisV9 "github.com/redis/go-redis/v9"
 
 	"github.com/nkonev/dcron"
 )
@@ -22,7 +23,7 @@ func WithLock(redisClient *redisV9.Client, options ...RedisLockOption) dcron.Cro
 	return dcron.WithLock(NewRedisLock(redisClient, options...))
 }
 
-func (m *RedisLock) Lock(ctx context.Context, jobSettings any, key, value string) bool {
+func (m *RedisLock) Lock(ctx context.Context, jobSettings any, key, value string) (bool, any) {
 	duration, ok := jobSettings.(time.Duration)
 	if !ok {
 		if m.logger != nil {
@@ -32,7 +33,7 @@ func (m *RedisLock) Lock(ctx context.Context, jobSettings any, key, value string
 			m.slogLogger.ErrorContext(ctx, "unable to cast to time.Duration", dcron.SlogKeyTaskName, key)
 		}
 
-		return false
+		return false, nil
 	}
 
 	if duration == 0 {
@@ -42,7 +43,7 @@ func (m *RedisLock) Lock(ctx context.Context, jobSettings any, key, value string
 		if m.slogLogger != nil {
 			m.slogLogger.ErrorContext(ctx, "bad zero expiration", dcron.SlogKeyTaskName, key)
 		}
-		return false
+		return false, nil
 	}
 
 	locked, err := m.client.SetNX(ctx, key, value, duration).Result()
@@ -53,13 +54,13 @@ func (m *RedisLock) Lock(ctx context.Context, jobSettings any, key, value string
 		if m.slogLogger != nil {
 			m.slogLogger.ErrorContext(ctx, "unable to take redis lock", dcron.SlogKeyTaskName, key, dcron.SlogKeyError, err)
 		}
-		return false
+		return false, nil
 	}
 
-	return locked
+	return locked, nil
 }
 
-func (m *RedisLock) Unlock(ctx context.Context, jobSetting any, key, value string) {
+func (m *RedisLock) Unlock(ctx context.Context, jobSetting any, key, value string, lockValue any) {
 	m.client.Del(ctx, key)
 }
 
