@@ -1,9 +1,9 @@
 module github.com/nkonev/dcron/plugin/trace/otel
 
-go 1.22
+go 1.23.0
 
 require (
-	github.com/nkonev/dcron v1.7.12
+	github.com/nkonev/dcron v1.7.13
 	go.opentelemetry.io/otel/trace v1.30.0
 )
 
