@@ -25,12 +25,12 @@ type RedisLock struct {
 	client *redis.Client
 }
 
-func (m *RedisLock) Lock(ctx context.Context, key, value string) bool {
+func (m *RedisLock) Lock(ctx context.Context, key, value string) (bool, any) {
 	ret := m.client.SetNX(ctx, key, value, time.Hour)
-	return ret.Err() == nil && ret.Val()
+	return ret.Err() == nil && ret.Val(), nil
 }
 
-func (m *RedisLock) Unlock(ctx context.Context, key, value string) {
+func (m *RedisLock) Unlock(ctx context.Context, key, value string, lockValue any) {
 	m.client.Del(ctx, key)
 }
 ```
@@ -186,9 +186,6 @@ func (la *StructuredZapLoggerAdapter) InfoContext(ctx context.Context, msg strin
 ## Redis lock
 
 There is already implemented RedisLock:
-
-
-Now you can create a cron with that:
 
 ```go
 import (
