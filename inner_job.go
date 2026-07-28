@@ -159,6 +159,7 @@ func (j *innerJob) Run() {
 
 					break // prevents incrementing FailedRun
 				} else {
+					atomic.AddInt64(&j.statistics.FailedRun, 1)
 					if j.logger != nil {
 						j.logger.Errorf("an error occurred during task %v execution: %v", task.Key, task.Return)
 					}
@@ -166,13 +167,12 @@ func (j *innerJob) Run() {
 						j.slogLogger.ErrorContext(ctx, "an error occurred during task execution", SlogKeyTaskName, task.Key, SlogKeyError, task.Return)
 					}
 				}
-				atomic.AddInt64(&j.statistics.FailedRun, 1)
 				if ctx.Err() != nil {
 					if j.logger != nil {
-						j.logger.Errorf("got error in the context task %v execution: %v", task.Key, ctx.Err())
+						j.logger.Infof("context done with %v execution: %v", task.Key, ctx.Err())
 					}
 					if j.slogLogger != nil {
-						j.slogLogger.ErrorContext(ctx, "got error in the context", SlogKeyTaskName, task.Key, SlogKeyError, ctx.Err())
+						j.slogLogger.InfoContext(ctx, "context done with", SlogKeyTaskName, task.Key, SlogKeyError, ctx.Err())
 					}
 					break
 				}
