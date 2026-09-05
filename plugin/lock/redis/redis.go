@@ -27,14 +27,16 @@ func WithLock(redisClient *redisV9.Client, options ...RedisLockOption) dcron.Cro
 func (m *RedisLock) Lock(ctx context.Context, jobSettings any, key, value string) (bool, any, error) {
 	duration, ok := jobSettings.(time.Duration)
 	if !ok {
+		msg := "please provide ttl via WithLockTTL()"
+
 		if m.logger != nil {
-			m.logger.Errorf("unable to cast to time.Duration %v", key)
+			m.logger.Errorf("unable to cast to time.Duration %v, "+msg, key)
 		}
 		if m.slogLogger != nil {
-			m.slogLogger.ErrorContext(ctx, "unable to cast to time.Duration", dcron.SlogKeyTaskName, key)
+			m.slogLogger.ErrorContext(ctx, "unable to cast to time.Duration, "+msg, dcron.SlogKeyTaskName, key)
 		}
 
-		return false, nil, errors.New("unable to cast redis ttl")
+		return false, nil, errors.New("unable to cast redis ttl, " + msg)
 	}
 
 	if duration == 0 {
@@ -61,7 +63,7 @@ func (m *RedisLock) Lock(ctx context.Context, jobSettings any, key, value string
 	return locked, nil, nil
 }
 
-func (m *RedisLock) Unlock(ctx context.Context, jobSetting any, key, value string, lockValue any) error {
+func (m *RedisLock) Unlock(ctx context.Context, jobSettings any, key, value string, lockValue any) error {
 	return m.client.Del(ctx, key).Err()
 }
 

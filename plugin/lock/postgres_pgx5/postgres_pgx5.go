@@ -37,6 +37,8 @@ func WithConfig(connConfig *pgx.ConnConfig, options ...PostgresLockOption) dcron
 	}, options...))
 }
 
+var missedKeysMsg = "please provide keys via WithKeys()"
+
 func (m *PostgresLock) Lock(ctx context.Context, jobSettings any, key, value string) (bool, any, error) {
 	conn, err := m.connFactory()
 	if err != nil {
@@ -61,13 +63,13 @@ func (m *PostgresLock) Lock(ctx context.Context, jobSettings any, key, value str
 	keys, ok := jobSettings.(argKeys)
 	if !ok {
 		if m.logger != nil {
-			m.logger.Errorf("unable to cast to argKeys %T", jobSettings)
+			m.logger.Errorf("unable to cast to argKeys %T, "+missedKeysMsg, jobSettings)
 		}
 		if m.slogLogger != nil {
-			m.slogLogger.ErrorContext(ctx, "unable to cast to argKeys", dcron.SlogKeyTaskName, key)
+			m.slogLogger.ErrorContext(ctx, "unable to cast to argKeys, "+missedKeysMsg, dcron.SlogKeyTaskName, key)
 		}
 
-		return false, nil, errors.New("unable to cast to argKeys")
+		return false, nil, errors.New("unable to cast to argKeys, " + missedKeysMsg)
 	}
 
 	var locked bool
@@ -102,13 +104,13 @@ func (m *PostgresLock) Unlock(ctx context.Context, jobSetting any, key, value st
 	keys, ok := jobSetting.(argKeys)
 	if !ok {
 		if m.logger != nil {
-			m.logger.Errorf("unable to cast to argKeys %T", jobSetting)
+			m.logger.Errorf("unable to cast to argKeys %T, "+missedKeysMsg, jobSetting)
 		}
 		if m.slogLogger != nil {
-			m.slogLogger.ErrorContext(ctx, "unable to cast to argKeys", dcron.SlogKeyTaskName, key)
+			m.slogLogger.ErrorContext(ctx, "unable to cast to argKeys, "+missedKeysMsg, dcron.SlogKeyTaskName, key)
 		}
 
-		return errors.New("unable to cast to argKeys")
+		return errors.New("unable to cast to argKeys, " + missedKeysMsg)
 	}
 
 	var unlocked bool
