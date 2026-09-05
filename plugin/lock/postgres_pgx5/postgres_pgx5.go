@@ -50,21 +50,21 @@ func WithPool(pool *pgxpool.Pool, options ...PostgresLockOption) dcron.CronOptio
 			return nil, err
 		}
 
-		return &poolAdapter{
+		return &poolToQuerierAdapter{
 			conn: conn,
 		}, nil
 	}, options...))
 }
 
-type poolAdapter struct {
+type poolToQuerierAdapter struct {
 	conn *pgxpool.Conn
 }
 
-func (a *poolAdapter) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
+func (a *poolToQuerierAdapter) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
 	return a.conn.QueryRow(ctx, sql, args...)
 }
 
-func (a *poolAdapter) Close(ctx context.Context) error {
+func (a *poolToQuerierAdapter) Close(ctx context.Context) error {
 	a.conn.Release()
 
 	return nil
@@ -119,9 +119,9 @@ func (m *PostgresLock) Lock(ctx context.Context, jobSettings any, key, value str
 }
 
 func (m *PostgresLock) Unlock(ctx context.Context, jobSettings any, key, value string, lockValue any) error {
-	conn, ok := lockValue.(*pgx.Conn)
+	conn, ok := lockValue.(Querier)
 	if !ok {
-		return fmt.Errorf("unable to cast lockValue to *pgx.Conn: got %T", lockValue)
+		return fmt.Errorf("unable to cast lockValue to Querier: got %T", lockValue)
 	}
 	defer func() {
 		cerr := conn.Close(ctx)
