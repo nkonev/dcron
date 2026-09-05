@@ -20,6 +20,7 @@ type Task struct {
 	BeginAt    *time.Time
 	EndAt      *time.Time
 	Return     error
+	LockError  error
 	Skipped    bool
 	Missed     bool
 	TriedTimes int

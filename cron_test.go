@@ -21,7 +21,7 @@ func Test_Cron(t *testing.T) {
 
 	lock.EXPECT().
 		Lock(gomock.Any(), gomock.Any(), gomock.Any(), c.Hostname()).
-		Return(true, nil).
+		Return(true, nil, nil).
 		Times(2)
 
 	lock.EXPECT().

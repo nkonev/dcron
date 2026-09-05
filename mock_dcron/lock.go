@@ -41,12 +41,13 @@ func (m *MockLock) EXPECT() *MockLockMockRecorder {
 }
 
 // Lock mocks base method.
-func (m *MockLock) Lock(ctx context.Context, jobSetting any, key, value string) (bool, any) {
+func (m *MockLock) Lock(ctx context.Context, jobSetting any, key, value string) (bool, any, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Lock", ctx, jobSetting, key, value)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(any)
-	return ret0, ret1
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // Lock indicates an expected call of Lock.
@@ -56,9 +57,11 @@ func (mr *MockLockMockRecorder) Lock(ctx, jobSetting, key, value any) *gomock.Ca
 }
 
 // Unlock mocks base method.
-func (m *MockLock) Unlock(ctx context.Context, jobSetting any, key, value string, lockValue any) {
+func (m *MockLock) Unlock(ctx context.Context, jobSetting any, key, value string, lockValue any) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Unlock", ctx, jobSetting, key, value, lockValue)
+	ret := m.ctrl.Call(m, "Unlock", ctx, jobSetting, key, value, lockValue)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Unlock indicates an expected call of Unlock.

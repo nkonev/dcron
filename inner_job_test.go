@@ -80,8 +80,14 @@ func Test_innerJob_Run(t *testing.T) {
 
 	lock.EXPECT().
 		Lock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(ctx context.Context, jobSettings any, key, value string) (bool, any) {
-			return value != "always_miss", nil
+		DoAndReturn(func(ctx context.Context, jobSettings any, key, value string) (bool, any, error) {
+			if value == "always_miss" {
+				return false, nil, nil
+			} else if value == "always_error" {
+				return false, nil, errors.New("an error occurred during acquiring lock")
+			} else {
+				return true, nil, nil
+			}
 		}).
 		MinTimes(1)
 
@@ -305,6 +311,38 @@ func Test_innerJob_Run(t *testing.T) {
 				PassedRun:   0,
 				FailedRun:   0,
 				RetriedRun:  0,
+			},
+		},
+		{
+			name: "lock_failed_miss",
+			fields: fields{
+				cron:        NewCron(WithLock(lock), WithHostname("always_error")),
+				entryID:     1,
+				entryGetter: mockEntryGetter,
+				ctxBefore: func(ctx context.Context, task Task) (skip bool) {
+					return false
+				},
+				run: func(ctx context.Context) error {
+					return nil
+				},
+				ctxAfter: func(ctx context.Context, task Task) {
+					if !task.Missed {
+						t.Fatal(task.Missed)
+					}
+				},
+				retryTimes: 1,
+			},
+			statistics: Statistics{
+				TotalTask:   1,
+				PassedTask:  0,
+				FailedTask:  0,
+				SkippedTask: 0,
+				MissedTask:  1,
+				TotalRun:    0,
+				PassedRun:   0,
+				FailedRun:   0,
+				RetriedRun:  0,
+				FailedLock:  1,
 			},
 		},
 		{

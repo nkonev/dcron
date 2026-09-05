@@ -114,20 +114,39 @@ func (j *innerJob) Run() {
 		var lockValue any
 		var lockTaken bool
 
-		shouldUseLock := func() bool {
-			return !j.noLock && j.cron.lock != nil
-		}
+		shouldUseLock := !j.noLock && j.cron.lock != nil
+
 		shouldExec := func() bool {
-			if !shouldUseLock() {
+			if !shouldUseLock {
 				return true
 			}
 
-			lockTaken, lockValue = j.cron.lock.Lock(ctx, j.settings, task.Key, c.hostname)
-			return lockTaken
+			lockTaken, lockValue, task.LockError = j.cron.lock.Lock(ctx, j.settings, task.Key, c.hostname)
+			return lockTaken && task.LockError == nil
 		}
-		needExec := shouldExec()
-		if lockTaken {
-			defer j.cron.lock.Unlock(ctx, j.settings, task.Key, c.hostname, lockValue)
+		var needExec = shouldExec()
+		if task.LockError != nil {
+			atomic.AddInt64(&j.statistics.FailedLock, 1)
+			if j.logger != nil {
+				j.logger.Errorf("an error occurred during acquiring %v lock: %v", task.Key, task.LockError)
+			}
+			if j.slogLogger != nil {
+				j.slogLogger.ErrorContext(ctx, "an error occurred during acquiring lock", SlogKeyTaskName, task.Key, SlogKeyError, task.LockError)
+			}
+		} else if lockTaken {
+			defer func() {
+				unlockErr := j.cron.lock.Unlock(ctx, j.settings, task.Key, c.hostname, lockValue)
+
+				if unlockErr != nil {
+					atomic.AddInt64(&j.statistics.FailedUnlock, 1)
+					if j.logger != nil {
+						j.logger.Errorf("an error occurred during releasing %v lock: %v", task.Key, unlockErr)
+					}
+					if j.slogLogger != nil {
+						j.slogLogger.ErrorContext(ctx, "an error occurred during releasing lock", SlogKeyTaskName, task.Key, SlogKeyError, unlockErr)
+					}
+				}
+			}()
 		}
 
 		if needExec {
@@ -135,11 +154,13 @@ func (j *innerJob) Run() {
 			task.BeginAt = &beginAt
 
 			for i := 0; i < j.retryTimes; i++ {
+				oneBasedAtt := i + 1
+
 				if j.logger != nil {
-					j.logger.Infof("starting task %v: %v / %v", task.Key, (i + 1), j.retryTimes)
+					j.logger.Infof("starting task %v: %v / %v", task.Key, oneBasedAtt, j.retryTimes)
 				}
 				if j.slogLogger != nil {
-					j.slogLogger.InfoContext(ctx, "starting task", SlogKeyTaskName, task.Key, SlogKeyAttempt, (i + 1), SlogKeyMaxAttempts, j.retryTimes)
+					j.slogLogger.InfoContext(ctx, "starting task", SlogKeyTaskName, task.Key, SlogKeyAttempt, oneBasedAtt, SlogKeyMaxAttempts, j.retryTimes)
 				}
 
 				task.Return = safeRun(ctx, j.run)
@@ -199,11 +220,16 @@ func (j *innerJob) Run() {
 			task.Missed = true
 			atomic.AddInt64(&j.statistics.MissedTask, 1)
 
+			reason := "lock is already taken"
+			if task.LockError != nil {
+				reason = "error during taking lock"
+			}
+
 			if j.logger != nil {
-				j.logger.Infof("task %v was missed because of lock", task.Key)
+				j.logger.Infof("task %v was missed because of %s", task.Key, reason)
 			}
 			if j.slogLogger != nil {
-				j.slogLogger.InfoContext(ctx, "task was missed because of lock", SlogKeyTaskName, task.Key)
+				j.slogLogger.InfoContext(ctx, fmt.Sprintf("task was missed because of %s", reason), SlogKeyTaskName, task.Key)
 			}
 		}
 	} else {
