@@ -10,16 +10,13 @@ import (
 	"github.com/nkonev/dcron"
 )
 
-type connFactory func() (*pgx.Conn, error)
+type ConnFactory func() (*pgx.Conn, error)
 
 type PostgresLock struct {
-	connFactory connFactory
+	connFactory ConnFactory
 
 	logger     dcron.Logger
 	slogLogger dcron.SlogLogger
-
-	key1 int32
-	key2 int32
 }
 
 func WithConnString(connString string, options ...PostgresLockOption) dcron.CronOption {
@@ -50,13 +47,32 @@ func (m *PostgresLock) Lock(ctx context.Context, jobSettings any, key, value str
 
 	defer func() {
 		if !success {
-			conn.Close(ctx)
+			cerr := conn.Close(ctx)
+
+			if m.logger != nil {
+				m.logger.Errorf("unable to close db in unsuccessful case for %s: %v", key, cerr)
+			}
+			if m.slogLogger != nil {
+				m.slogLogger.ErrorContext(ctx, "unable to close db in unsuccessful case", dcron.SlogKeyTaskName, key, dcron.SlogKeyError, cerr)
+			}
 		}
 	}()
 
+	keys, ok := jobSettings.(argKeys)
+	if !ok {
+		if m.logger != nil {
+			m.logger.Errorf("unable to cast to argKeys %T", jobSettings)
+		}
+		if m.slogLogger != nil {
+			m.slogLogger.ErrorContext(ctx, "unable to cast to argKeys", dcron.SlogKeyTaskName, key)
+		}
+
+		return false, nil, errors.New("unable to cast to argKeys")
+	}
+
 	var locked bool
 
-	r := conn.QueryRow(ctx, "select pg_try_advisory_lock($1, $2)", m.key1, m.key2)
+	r := conn.QueryRow(ctx, "select pg_try_advisory_lock($1, $2)", keys.key1, keys.key2)
 	err = r.Scan(&locked)
 	if err != nil {
 		return false, nil, fmt.Errorf("unable to scan into result: %w", err)
@@ -72,11 +88,32 @@ func (m *PostgresLock) Unlock(ctx context.Context, jobSetting any, key, value st
 	if !ok {
 		return fmt.Errorf("unable to cast lockValue to *pgx.Conn: got %T", lockValue)
 	}
-	defer conn.Close(ctx)
+	defer func() {
+		cerr := conn.Close(ctx)
+
+		if m.logger != nil {
+			m.logger.Errorf("unable to close db in successful case for %s: %v", key, cerr)
+		}
+		if m.slogLogger != nil {
+			m.slogLogger.ErrorContext(ctx, "unable to close db in successful case", dcron.SlogKeyTaskName, key, dcron.SlogKeyError, cerr)
+		}
+	}()
+
+	keys, ok := jobSetting.(argKeys)
+	if !ok {
+		if m.logger != nil {
+			m.logger.Errorf("unable to cast to argKeys %T", jobSetting)
+		}
+		if m.slogLogger != nil {
+			m.slogLogger.ErrorContext(ctx, "unable to cast to argKeys", dcron.SlogKeyTaskName, key)
+		}
+
+		return errors.New("unable to cast to argKeys")
+	}
 
 	var unlocked bool
 
-	r := conn.QueryRow(ctx, "select pg_advisory_unlock($1, $2)", m.key1, m.key2)
+	r := conn.QueryRow(ctx, "select pg_advisory_unlock($1, $2)", keys.key1, keys.key2)
 	err := r.Scan(&unlocked)
 	if err != nil {
 		return fmt.Errorf("unable to scan into result: %w", err)
@@ -89,7 +126,7 @@ func (m *PostgresLock) Unlock(ctx context.Context, jobSetting any, key, value st
 	return nil
 }
 
-func NewPostgresLock(connFactory connFactory, options ...PostgresLockOption) *PostgresLock {
+func NewPostgresLock(connFactory ConnFactory, options ...PostgresLockOption) *PostgresLock {
 	ret := &PostgresLock{connFactory: connFactory}
 
 	for _, option := range options {
@@ -115,16 +152,12 @@ func WithSLog(logger dcron.SlogLogger) PostgresLockOption {
 	}
 }
 
-// WithKey1 sets the structured logger interface.
-func WithKey1(key int32) PostgresLockOption {
-	return func(rl *PostgresLock) {
-		rl.key1 = key
-	}
+type argKeys struct {
+	key1 int32
+	key2 int32
 }
 
-// WithKey2 sets the structured logger interface.
-func WithKey2(key int32) PostgresLockOption {
-	return func(rl *PostgresLock) {
-		rl.key2 = key
-	}
+// WithKeys sets the keys for advisory lock function.
+func WithKeys(key1 int32, key2 int32) dcron.JobOption {
+	return dcron.WithJobSettings(argKeys{key1: key1, key2: key2})
 }
