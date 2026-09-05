@@ -6,11 +6,12 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/nkonev/dcron"
 )
 
-type ConnFactory func() (*pgx.Conn, error)
+type ConnFactory func() (Querier, error)
 
 type PostgresLock struct {
 	connFactory ConnFactory
@@ -19,25 +20,57 @@ type PostgresLock struct {
 	slogLogger dcron.SlogLogger
 }
 
+type Querier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Close(ctx context.Context) error
+}
+
 func WithConnString(connString string, options ...PostgresLockOption) dcron.CronOption {
-	return dcron.WithLock(NewPostgresLock(func() (*pgx.Conn, error) {
+	return dcron.WithLock(NewPostgresLock(func() (Querier, error) {
 		return pgx.Connect(context.Background(), connString)
 	}, options...))
 }
 
 func WithConnStringAndOptions(connString string, pgOptions pgx.ParseConfigOptions, options ...PostgresLockOption) dcron.CronOption {
-	return dcron.WithLock(NewPostgresLock(func() (*pgx.Conn, error) {
+	return dcron.WithLock(NewPostgresLock(func() (Querier, error) {
 		return pgx.ConnectWithOptions(context.Background(), connString, pgOptions)
 	}, options...))
 }
 
 func WithConfig(connConfig *pgx.ConnConfig, options ...PostgresLockOption) dcron.CronOption {
-	return dcron.WithLock(NewPostgresLock(func() (*pgx.Conn, error) {
+	return dcron.WithLock(NewPostgresLock(func() (Querier, error) {
 		return pgx.ConnectConfig(context.Background(), connConfig)
 	}, options...))
 }
 
-var missedKeysMsg = "please provide keys via WithKeys()"
+func WithPool(pool *pgxpool.Pool, options ...PostgresLockOption) dcron.CronOption {
+	return dcron.WithLock(NewPostgresLock(func() (Querier, error) {
+		conn, err := pool.Acquire(context.Background())
+		if err != nil {
+			return nil, err
+		}
+
+		return &poolAdapter{
+			conn: conn,
+		}, nil
+	}, options...))
+}
+
+type poolAdapter struct {
+	conn *pgxpool.Conn
+}
+
+func (a *poolAdapter) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
+	return a.conn.QueryRow(ctx, sql, args...)
+}
+
+func (a *poolAdapter) Close(ctx context.Context) error {
+	a.conn.Release()
+
+	return nil
+}
+
+const missedKeysMsg = "please provide keys via WithKeys()"
 
 func (m *PostgresLock) Lock(ctx context.Context, jobSettings any, key, value string) (bool, any, error) {
 	conn, err := m.connFactory()
