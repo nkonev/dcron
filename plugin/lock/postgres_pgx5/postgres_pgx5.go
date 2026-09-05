@@ -78,10 +78,10 @@ func (m *PostgresLock) Lock(ctx context.Context, jobSettings any, key, value str
 		return false, nil, fmt.Errorf("unable to instantiate connection: %w", err)
 	}
 
-	var success bool
+	var delayClosingConnection bool
 
 	defer func() {
-		if !success {
+		if !delayClosingConnection {
 			cerr := conn.Close(ctx)
 
 			if m.logger != nil {
@@ -105,17 +105,13 @@ func (m *PostgresLock) Lock(ctx context.Context, jobSettings any, key, value str
 		return false, nil, errors.New("unable to cast to argKeys, " + missedKeysMsg)
 	}
 
-	var locked bool
-
 	r := conn.QueryRow(ctx, "select pg_try_advisory_lock($1, $2)", keys.key1, keys.key2)
-	err = r.Scan(&locked)
+	err = r.Scan(&delayClosingConnection)
 	if err != nil {
 		return false, nil, fmt.Errorf("unable to scan into result: %w", err)
 	}
 
-	success = true
-
-	return locked, conn, nil
+	return delayClosingConnection, conn, nil
 }
 
 func (m *PostgresLock) Unlock(ctx context.Context, jobSettings any, key, value string, lockValue any) error {
