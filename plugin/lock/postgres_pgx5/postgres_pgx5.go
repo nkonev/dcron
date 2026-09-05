@@ -85,7 +85,7 @@ func (m *PostgresLock) Lock(ctx context.Context, jobSettings any, key, value str
 	return locked, conn, nil
 }
 
-func (m *PostgresLock) Unlock(ctx context.Context, jobSetting any, key, value string, lockValue any) error {
+func (m *PostgresLock) Unlock(ctx context.Context, jobSettings any, key, value string, lockValue any) error {
 	conn, ok := lockValue.(*pgx.Conn)
 	if !ok {
 		return fmt.Errorf("unable to cast lockValue to *pgx.Conn: got %T", lockValue)
@@ -101,10 +101,10 @@ func (m *PostgresLock) Unlock(ctx context.Context, jobSetting any, key, value st
 		}
 	}()
 
-	keys, ok := jobSetting.(argKeys)
+	keys, ok := jobSettings.(argKeys)
 	if !ok {
 		if m.logger != nil {
-			m.logger.Errorf("unable to cast to argKeys %T, "+missedKeysMsg, jobSetting)
+			m.logger.Errorf("unable to cast to argKeys %T, "+missedKeysMsg, jobSettings)
 		}
 		if m.slogLogger != nil {
 			m.slogLogger.ErrorContext(ctx, "unable to cast to argKeys, "+missedKeysMsg, dcron.SlogKeyTaskName, key)

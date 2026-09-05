@@ -41,9 +41,9 @@ func (m *MockLock) EXPECT() *MockLockMockRecorder {
 }
 
 // Lock mocks base method.
-func (m *MockLock) Lock(ctx context.Context, jobSetting any, key, value string) (bool, any, error) {
+func (m *MockLock) Lock(ctx context.Context, jobSettings any, key, value string) (bool, any, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Lock", ctx, jobSetting, key, value)
+	ret := m.ctrl.Call(m, "Lock", ctx, jobSettings, key, value)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(any)
 	ret2, _ := ret[2].(error)
@@ -51,21 +51,21 @@ func (m *MockLock) Lock(ctx context.Context, jobSetting any, key, value string) 
 }
 
 // Lock indicates an expected call of Lock.
-func (mr *MockLockMockRecorder) Lock(ctx, jobSetting, key, value any) *gomock.Call {
+func (mr *MockLockMockRecorder) Lock(ctx, jobSettings, key, value any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lock", reflect.TypeOf((*MockLock)(nil).Lock), ctx, jobSetting, key, value)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lock", reflect.TypeOf((*MockLock)(nil).Lock), ctx, jobSettings, key, value)
 }
 
 // Unlock mocks base method.
-func (m *MockLock) Unlock(ctx context.Context, jobSetting any, key, value string, lockValue any) error {
+func (m *MockLock) Unlock(ctx context.Context, jobSettings any, key, value string, lockValue any) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Unlock", ctx, jobSetting, key, value, lockValue)
+	ret := m.ctrl.Call(m, "Unlock", ctx, jobSettings, key, value, lockValue)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Unlock indicates an expected call of Unlock.
-func (mr *MockLockMockRecorder) Unlock(ctx, jobSetting, key, value, lockValue any) *gomock.Call {
+func (mr *MockLockMockRecorder) Unlock(ctx, jobSettings, key, value, lockValue any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unlock", reflect.TypeOf((*MockLock)(nil).Unlock), ctx, jobSetting, key, value, lockValue)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unlock", reflect.TypeOf((*MockLock)(nil).Unlock), ctx, jobSettings, key, value, lockValue)
 }

@@ -185,8 +185,6 @@ func (la *StructuredZapLoggerAdapter) InfoContext(ctx context.Context, msg strin
 # Plugins
 ## Redis lock
 
-There is already implemented RedisLock:
-
 ```go
 import (
 	redisLock "github.com/nkonev/dcron/plugin/lock/redis"
@@ -231,6 +229,40 @@ Finally, start the cron:
 	time.Sleep(time.Minute)
 	<-cron.Stop().Done()
 ```
+
+## PostgreSQL pgx v5 lock
+
+```go
+import (
+	postgresLock "github.com/nkonev/dcron/plugin/lock/postgres_pgx5"
+	"log/slog"
+)
+
+func main() {
+	lgr := slog.Default()
+	
+	cron := dcron.NewCron(
+		postgresLock.WithConnString("postgres://postgres:postgresqlPassword@localhost:45401/chat?sslmode=disable&application_name=lock-app"),
+		dcron.WithSLog(lgr),
+	)
+}
+```
+
+Then, create a job and add it to the cron.
+
+```go
+	job1 := dcron.NewJob("Job1", "*/15 * * * * *", func(ctx context.Context) error {
+		if task, ok := dcron.TaskFromContext(ctx); ok {
+			lgr.InfoContext(ctx, "run:", "dcron_task_spec", task.Job.Spec(), dcron.SlogKeyTaskName, task.Key)
+		}
+		// do something
+		return nil
+	}, postgresLock.WithKeys(1, 2))
+	if err := cron.AddJobs(job1); err != nil {
+		panic(err)
+	}
+```
+
 
 ## OTeL Tracing
 
