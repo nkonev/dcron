@@ -3,7 +3,7 @@ module github.com/nkonev/dcron/plugin/lock/redis
 go 1.23.0
 
 require (
-	github.com/nkonev/dcron v1.8.0
+	github.com/nkonev/dcron v1.9.0
 	github.com/redis/go-redis/v9 v9.6.1
 )
 
