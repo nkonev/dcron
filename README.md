@@ -263,6 +263,14 @@ Then, create a job and add it to the cron.
 	}
 ```
 
+Finally, start the cron:
+
+```go
+	cron.Start()
+	log.Println("cron started")
+	time.Sleep(time.Minute)
+	<-cron.Stop().Done()
+```
 
 ## OTeL Tracing
 
