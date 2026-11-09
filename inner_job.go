@@ -23,6 +23,13 @@ type JobMeta interface {
 type spanStarter func(ctx context.Context) (context.Context, any)
 type spanFinisher func(ctx context.Context, span any)
 
+type OverlappingBehaviour int16
+
+const (
+	OverlappingBehaviourCancelOld OverlappingBehaviour = iota
+	OverlappingBehaviourKeepOldRunning
+)
+
 type innerJob struct {
 	cron          *Cron
 	entryID       cron.EntryID
@@ -42,6 +49,7 @@ type innerJob struct {
 	logger        Logger
 	slogLogger    SlogLogger
 	settings      any
+	overlapping   OverlappingBehaviour
 }
 
 const (
@@ -88,8 +96,13 @@ func (j *innerJob) Run() {
 		parentCtx = context.Background()
 	}
 
-	ctx, cancel := context.WithDeadline(context.WithValue(parentCtx, keyContextTask, task), nextAt)
-	defer cancel()
+	var ctx context.Context = parentCtx
+
+	if j.overlapping == OverlappingBehaviourCancelOld {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(context.WithValue(parentCtx, keyContextTask, task), nextAt)
+		defer cancel()
+	}
 
 	if j.deriveContext != nil {
 		ctx = j.deriveContext(ctx, task)

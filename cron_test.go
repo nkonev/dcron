@@ -57,6 +57,60 @@ func Test_Cron(t *testing.T) {
 	}
 }
 
+func Test_Cron_Overlapping_Keep(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	lock := mock_dcron.NewMockLock(ctrl)
+
+	c := NewCron(WithLock(lock))
+
+	first := lock.EXPECT().
+		Lock(gomock.Any(), gomock.Any(), gomock.Any(), c.Hostname()).
+		Return(true, nil, nil).Times(1)
+
+	second := lock.EXPECT().
+		Lock(gomock.Any(), gomock.Any(), gomock.Any(), c.Hostname()).
+		Return(false, nil, nil).MinTimes(1) // because we test against the real clock
+
+	gomock.InOrder(
+		first,
+		second,
+	)
+
+	lock.EXPECT().
+		Unlock(gomock.Any(), gomock.Any(), gomock.Any(), c.Hostname(), gomock.Any()).
+		Times(1)
+
+	job := NewJob("test", "*/5 * * * * *", func(ctx context.Context) error {
+		time.Sleep(7 * time.Second)
+		task, _ := TaskFromContext(ctx)
+		select {
+		case <-ctx.Done():
+			t.Logf("exit: %+v", task)
+		case <-time.After(time.Second):
+			t.Logf("run: %+v", task)
+		}
+		return nil
+	}, WithBeforeContextFunc(func(ctx context.Context, task Task) (skip bool) {
+		t.Logf("before: %+v", task)
+		return false
+	}), WithAfterContextFunc(func(ctx context.Context, task Task) {
+		t.Logf("after: %+v", task)
+	}), WithOverlappingBehaviour(OverlappingBehaviourKeepOldRunning))
+	if err := c.AddJobs(job); err != nil {
+		t.Fatal(err)
+	}
+	c.Start()
+	c.Run() // should be not working
+	time.Sleep(11 * time.Second)
+	<-c.Stop().Done()
+
+	t.Logf("cron statistics: %+v", c.Statistics())
+	for _, j := range c.Jobs() {
+		t.Logf("job %v statistics: %+v", j.Key(), j.Statistics())
+	}
+}
+
 func TestCron_AddJobs(t *testing.T) {
 	c := cron.New(cron.WithSeconds())
 

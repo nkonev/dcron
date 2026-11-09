@@ -98,3 +98,10 @@ func WithDeriveContext(deriveContext DeriveContext) JobOption {
 		job.deriveContext = deriveContext
 	}
 }
+
+// WithOverlappingBehaviour specifies what to do if old tick is still run while new one arrives.
+func WithOverlappingBehaviour(beh OverlappingBehaviour) JobOption {
+	return func(job *innerJob) {
+		job.overlapping = beh
+	}
+}

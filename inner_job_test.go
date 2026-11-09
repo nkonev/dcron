@@ -107,6 +107,7 @@ func Test_innerJob_Run(t *testing.T) {
 		ctxAfter      AfterContextFunc
 		retryTimes    int
 		retryInterval RetryInterval
+		overlapping   OverlappingBehaviour
 	}
 	tests := []struct {
 		name       string
@@ -494,6 +495,7 @@ func Test_innerJob_Run(t *testing.T) {
 				ctxAfter:      tt.fields.ctxAfter,
 				retryTimes:    tt.fields.retryTimes,
 				retryInterval: tt.fields.retryInterval,
+				overlapping:   tt.fields.overlapping,
 			}
 			j.Run()
 			if got := j.Statistics(); got != tt.statistics {

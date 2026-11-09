@@ -230,6 +230,23 @@ Finally, start the cron:
 	<-cron.Stop().Done()
 ```
 
+# Overlapping behaviour
+By default the lib is going to cancel the old task in case the new tick arrives when the old one is still running.
+To just skip the new tick in this case and give time to the old task use `WithOverlappingBehaviour(OverlappingBehaviourKeepOldRunning)`:
+
+```go
+	job1 := dcron.NewJob("Job1", "*/15 * * * * *", func(ctx context.Context) error {
+		if task, ok := dcron.TaskFromContext(ctx); ok {
+			lgr.InfoContext(ctx, "run:", "dcron_task_spec", task.Job.Spec(), dcron.SlogKeyTaskName, task.Key)
+		}
+		// do something
+		return nil
+	}, redisLock.WithLockTTL(time.Minute), dcron.WithOverlappingBehaviour(dcron.OverlappingBehaviourKeepOldRunning))
+	if err := cron.AddJobs(job1); err != nil {
+		panic(err)
+	}
+```
+
 ## PostgreSQL pgx v5 lock
 
 ```go
