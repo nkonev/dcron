@@ -96,12 +96,22 @@ func (j *innerJob) Run() {
 		parentCtx = context.Background()
 	}
 
-	var ctx context.Context = parentCtx
+	var ctx context.Context
 
-	if j.overlapping == OverlappingBehaviourCancelOld {
+	switch j.overlapping {
+	case OverlappingBehaviourCancelOld:
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithDeadline(context.WithValue(parentCtx, keyContextTask, task), nextAt)
 		defer cancel()
+	case OverlappingBehaviourKeepOldRunning:
+		ctx = context.WithValue(parentCtx, keyContextTask, task)
+	default:
+		if j.logger != nil {
+			j.logger.Errorf("unexpected OverlappingBehaviour value: %v: %v", task.Key, j.overlapping)
+		}
+		if j.slogLogger != nil {
+			j.slogLogger.ErrorContext(ctx, "unexpected OverlappingBehaviour value", SlogKeyTaskName, task.Key, "value", j.overlapping)
+		}
 	}
 
 	if j.deriveContext != nil {
