@@ -96,7 +96,7 @@ func (j *innerJob) Run() {
 		parentCtx = context.Background()
 	}
 
-	var ctx context.Context
+	var ctx context.Context = parentCtx
 
 	switch j.overlapping {
 	case OverlappingBehaviourCancelOld:
