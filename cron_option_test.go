@@ -111,7 +111,7 @@ func TestWithContext(t *testing.T) {
 			t.Fatal("wrong context")
 		}
 		return nil
-	})
+	}, WithOverlappingBehaviour(OverlappingBehaviourCancelOld))
 
 	t.Run("start with context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())

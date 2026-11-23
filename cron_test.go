@@ -42,7 +42,7 @@ func Test_Cron(t *testing.T) {
 		return false
 	}), WithAfterContextFunc(func(ctx context.Context, task Task) {
 		t.Logf("after: %+v", task)
-	}))
+	}), WithOverlappingBehaviour(OverlappingBehaviourCancelOld))
 	if err := c.AddJobs(job); err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func Test_Cron_Overlapping_Keep(t *testing.T) {
 		return false
 	}), WithAfterContextFunc(func(ctx context.Context, task Task) {
 		t.Logf("after: %+v", task)
-	}), WithOverlappingBehaviour(OverlappingBehaviourKeepOldRunning))
+	}), WithOverlappingBehaviour(OverlappingBehaviourKeepOldRunningSkipNew))
 	if err := c.AddJobs(job); err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestCron_AddJobs(t *testing.T) {
 			},
 			args: args{
 				jobs: []Job{
-					NewJob("test_job", "* * * * * *", nil),
+					NewJob("test_job", "* * * * * *", nil, WithOverlappingBehaviour(OverlappingBehaviourCancelOld)),
 				},
 			},
 			wantErr: false,
@@ -148,9 +148,9 @@ func TestCron_AddJobs(t *testing.T) {
 			},
 			args: args{
 				jobs: []Job{
-					NewJob("test_job_1", "* * * * * *", nil),
-					NewJob("test_job_2", "* * * * * *", nil),
-					NewJob("test_job_3", "* * * * * *", nil),
+					NewJob("test_job_1", "* * * * * *", nil, WithOverlappingBehaviour(OverlappingBehaviourCancelOld)),
+					NewJob("test_job_2", "* * * * * *", nil, WithOverlappingBehaviour(OverlappingBehaviourCancelOld)),
+					NewJob("test_job_3", "* * * * * *", nil, WithOverlappingBehaviour(OverlappingBehaviourCancelOld)),
 				},
 			},
 			wantErr: false,
@@ -162,9 +162,9 @@ func TestCron_AddJobs(t *testing.T) {
 			},
 			args: args{
 				jobs: []Job{
-					NewJob("test_job_1", "* * * * * *", nil),
-					NewJob("test_job_2", "* * * * *", nil),
-					NewJob("test_job_3", "* * * * * *", nil),
+					NewJob("test_job_1", "* * * * * *", nil, WithOverlappingBehaviour(OverlappingBehaviourCancelOld)),
+					NewJob("test_job_2", "* * * * *", nil, WithOverlappingBehaviour(OverlappingBehaviourCancelOld)),
+					NewJob("test_job_3", "* * * * * *", nil, WithOverlappingBehaviour(OverlappingBehaviourCancelOld)),
 				},
 			},
 			wantErr: true,
@@ -176,9 +176,9 @@ func TestCron_AddJobs(t *testing.T) {
 			},
 			args: args{
 				jobs: []Job{
-					NewJob("test_job_1", "* * * * * *", nil),
-					NewJob("test_job_2", "* * * * * *", nil),
-					NewJob("test_job_1", "* * * * * *", nil),
+					NewJob("test_job_1", "* * * * * *", nil, WithOverlappingBehaviour(OverlappingBehaviourCancelOld)),
+					NewJob("test_job_2", "* * * * * *", nil, WithOverlappingBehaviour(OverlappingBehaviourCancelOld)),
+					NewJob("test_job_1", "* * * * * *", nil, WithOverlappingBehaviour(OverlappingBehaviourCancelOld)),
 				},
 			},
 			wantErr: true,
@@ -190,7 +190,7 @@ func TestCron_AddJobs(t *testing.T) {
 			},
 			args: args{
 				jobs: []Job{
-					NewJob("test_job", "* * * * * *", nil, WithRetryTimes(3)),
+					NewJob("test_job", "* * * * * *", nil, WithRetryTimes(3), WithOverlappingBehaviour(OverlappingBehaviourCancelOld)),
 				},
 			},
 			wantErr: false,
@@ -202,7 +202,7 @@ func TestCron_AddJobs(t *testing.T) {
 			},
 			args: args{
 				jobs: []Job{
-					NewJob("test_job", "* * * * *", nil),
+					NewJob("test_job", "* * * * *", nil, WithOverlappingBehaviour(OverlappingBehaviourCancelOld)),
 				},
 			},
 			wantErr: true,
@@ -214,7 +214,7 @@ func TestCron_AddJobs(t *testing.T) {
 			},
 			args: args{
 				jobs: []Job{
-					NewJob("", "* * * * * *", nil),
+					NewJob("", "* * * * * *", nil, WithOverlappingBehaviour(OverlappingBehaviourCancelOld)),
 				},
 			},
 			wantErr: true,

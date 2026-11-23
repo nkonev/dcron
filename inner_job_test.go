@@ -131,7 +131,8 @@ func Test_innerJob_Run(t *testing.T) {
 						t.Fatal(task.Return)
 					}
 				},
-				retryTimes: 1,
+				retryTimes:  1,
+				overlapping: OverlappingBehaviourCancelOld,
 			},
 			statistics: Statistics{
 				TotalTask:   1,
@@ -162,7 +163,8 @@ func Test_innerJob_Run(t *testing.T) {
 						t.Fatal(task.Skipped)
 					}
 				},
-				retryTimes: 1,
+				retryTimes:  1,
+				overlapping: OverlappingBehaviourCancelOld,
 			},
 			statistics: Statistics{
 				TotalTask:   1,
@@ -196,7 +198,8 @@ func Test_innerJob_Run(t *testing.T) {
 						t.Fatal(task.TriedTimes)
 					}
 				},
-				retryTimes: 10,
+				retryTimes:  10,
+				overlapping: OverlappingBehaviourCancelOld,
 			},
 			statistics: Statistics{
 				TotalTask:   1,
@@ -234,6 +237,7 @@ func Test_innerJob_Run(t *testing.T) {
 				retryInterval: func(triedTimes int) time.Duration {
 					return time.Duration(triedTimes) * time.Second
 				},
+				overlapping: OverlappingBehaviourCancelOld,
 			},
 			statistics: Statistics{
 				TotalTask:   1,
@@ -270,6 +274,7 @@ func Test_innerJob_Run(t *testing.T) {
 				},
 				retryTimes:    5,
 				retryInterval: nil,
+				overlapping:   OverlappingBehaviourCancelOld,
 			},
 			statistics: Statistics{
 				TotalTask:   1,
@@ -300,7 +305,8 @@ func Test_innerJob_Run(t *testing.T) {
 						t.Fatal(task.Missed)
 					}
 				},
-				retryTimes: 1,
+				retryTimes:  1,
+				overlapping: OverlappingBehaviourCancelOld,
 			},
 			statistics: Statistics{
 				TotalTask:   1,
@@ -331,7 +337,8 @@ func Test_innerJob_Run(t *testing.T) {
 						t.Fatal(task.Missed)
 					}
 				},
-				retryTimes: 1,
+				retryTimes:  1,
+				overlapping: OverlappingBehaviourCancelOld,
 			},
 			statistics: Statistics{
 				TotalTask:   1,
@@ -360,7 +367,8 @@ func Test_innerJob_Run(t *testing.T) {
 						t.Fatal(task.Return)
 					}
 				},
-				retryTimes: 1,
+				retryTimes:  1,
+				overlapping: OverlappingBehaviourCancelOld,
 			},
 			statistics: Statistics{
 				TotalTask:   1,
@@ -391,7 +399,8 @@ func Test_innerJob_Run(t *testing.T) {
 						t.Fatal("expected task to be skipped")
 					}
 				},
-				retryTimes: 1,
+				retryTimes:  1,
+				overlapping: OverlappingBehaviourCancelOld,
 			},
 			statistics: Statistics{
 				TotalTask:   1,
@@ -415,7 +424,8 @@ func Test_innerJob_Run(t *testing.T) {
 						t.Fatal(task.Return)
 					}
 				},
-				retryTimes: 1,
+				retryTimes:  1,
+				overlapping: OverlappingBehaviourCancelOld,
 			},
 			statistics: Statistics{
 				TotalTask:  1,
@@ -439,7 +449,8 @@ func Test_innerJob_Run(t *testing.T) {
 					}
 					return nil
 				},
-				retryTimes: 1,
+				retryTimes:  1,
+				overlapping: OverlappingBehaviourCancelOld,
 			},
 			statistics: Statistics{
 				TotalTask:  1,
@@ -466,7 +477,8 @@ func Test_innerJob_Run(t *testing.T) {
 						t.Fatal(task.Return)
 					}
 				},
-				retryTimes: 1,
+				retryTimes:  1,
+				overlapping: OverlappingBehaviourCancelOld,
 			},
 			statistics: Statistics{
 				TotalTask:   1,

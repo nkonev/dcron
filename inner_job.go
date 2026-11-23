@@ -26,8 +26,9 @@ type spanFinisher func(ctx context.Context, span any)
 type OverlappingBehaviour int16
 
 const (
-	OverlappingBehaviourCancelOld OverlappingBehaviour = iota
-	OverlappingBehaviourKeepOldRunning
+	OverlappingBehaviourUnspecified OverlappingBehaviour = iota
+	OverlappingBehaviourCancelOld
+	OverlappingBehaviourKeepOldRunningSkipNew
 )
 
 type innerJob struct {
@@ -103,7 +104,9 @@ func (j *innerJob) Run() {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithDeadline(context.WithValue(parentCtx, keyContextTask, task), nextAt)
 		defer cancel()
-	case OverlappingBehaviourKeepOldRunning:
+	case OverlappingBehaviourUnspecified:
+		fallthrough
+	case OverlappingBehaviourKeepOldRunningSkipNew:
 		ctx = context.WithValue(parentCtx, keyContextTask, task)
 	default:
 		if j.logger != nil {
@@ -112,6 +115,7 @@ func (j *innerJob) Run() {
 		if j.slogLogger != nil {
 			j.slogLogger.ErrorContext(ctx, "unexpected OverlappingBehaviour value", SlogKeyTaskName, task.Key, "value", j.overlapping)
 		}
+		return
 	}
 
 	if j.deriveContext != nil {
