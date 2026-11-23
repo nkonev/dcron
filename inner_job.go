@@ -76,9 +76,9 @@ func (j *innerJob) Statistics() Statistics {
 	return j.statistics
 }
 
-func (j *innerJob) validate() error {
+func (j *innerJob) Validate() error {
 	if j.cron.lock != nil {
-		err := j.cron.lock.Validate(j.settings)
+		err := j.cron.lock.Validate(j.settings, j.key)
 		if err != nil {
 			return fmt.Errorf("error validating lock settings: %w", err)
 		}

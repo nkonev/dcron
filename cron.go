@@ -101,7 +101,7 @@ func (c *Cron) addJob(job Job) error {
 		option(j)
 	}
 
-	err := j.validate()
+	err := j.Validate()
 	if err != nil {
 		return fmt.Errorf("invalid job: %w", err)
 	}
