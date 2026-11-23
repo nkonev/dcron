@@ -76,6 +76,16 @@ func (j *innerJob) Statistics() Statistics {
 	return j.statistics
 }
 
+func (j *innerJob) validate() error {
+	if j.cron.lock != nil {
+		err := j.cron.lock.Validate(j.settings)
+		if err != nil {
+			return fmt.Errorf("error validating lock settings: %w", err)
+		}
+	}
+	return nil
+}
+
 func (j *innerJob) Run() {
 	c := j.cron
 	entry := j.entryGetter.Entry(j.entryID)

@@ -100,6 +100,12 @@ func (c *Cron) addJob(job Job) error {
 	for _, option := range job.Options() {
 		option(j)
 	}
+
+	err := j.validate()
+	if err != nil {
+		return fmt.Errorf("invalid job: %w", err)
+	}
+
 	if j.retryTimes < 1 {
 		j.retryTimes = 1
 	}

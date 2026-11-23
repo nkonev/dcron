@@ -28,6 +28,8 @@ func Test_Cron(t *testing.T) {
 		Unlock(gomock.Any(), gomock.Any(), gomock.Any(), c.Hostname(), gomock.Any()).
 		Times(2)
 
+	lock.EXPECT().Validate(gomock.Any()).Return(nil)
+
 	job := NewJob("test", "*/5 * * * * *", func(ctx context.Context) error {
 		task, _ := TaskFromContext(ctx)
 		select {
@@ -80,6 +82,8 @@ func Test_Cron_Overlapping_Keep(t *testing.T) {
 	lock.EXPECT().
 		Unlock(gomock.Any(), gomock.Any(), gomock.Any(), c.Hostname(), gomock.Any()).
 		Times(1)
+
+	lock.EXPECT().Validate(gomock.Any()).Return(nil)
 
 	job := NewJob("test", "*/5 * * * * *", func(ctx context.Context) error {
 		time.Sleep(7 * time.Second)

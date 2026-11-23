@@ -18,4 +18,6 @@ type Lock interface {
 	// Unlock removes the key/value,
 	// or does nothing.
 	Unlock(ctx context.Context, jobSettings any, key, value string, lockValue any) error
+
+	Validate(jobSettings any) error
 }

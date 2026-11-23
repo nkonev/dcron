@@ -69,3 +69,17 @@ func (mr *MockLockMockRecorder) Unlock(ctx, jobSettings, key, value, lockValue a
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unlock", reflect.TypeOf((*MockLock)(nil).Unlock), ctx, jobSettings, key, value, lockValue)
 }
+
+// Validate mocks base method.
+func (m *MockLock) Validate(jobSettings any) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Validate", jobSettings)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Validate indicates an expected call of Validate.
+func (mr *MockLockMockRecorder) Validate(jobSettings any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockLock)(nil).Validate), jobSettings)
+}
