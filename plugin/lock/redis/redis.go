@@ -24,29 +24,25 @@ func WithLock(redisClient *redisV9.Client, options ...RedisLockOption) dcron.Cro
 	return dcron.WithLock(NewRedisLock(redisClient, options...))
 }
 
+const missedDurationMsg = "please provide ttl via WithLockTTL()"
+
+func (m *RedisLock) Validate(jobSettings any, key string) error {
+	duration, ok := jobSettings.(time.Duration)
+	if !ok {
+		return errors.New("unable to cast to time.Duration for task key " + key + ", " + missedDurationMsg)
+	}
+
+	if duration <= 0 {
+		return errors.New("zero or negative redis ttl for task key " + key)
+	}
+
+	return nil
+}
+
 func (m *RedisLock) Lock(ctx context.Context, jobSettings any, key, value string) (bool, any, error) {
 	duration, ok := jobSettings.(time.Duration)
 	if !ok {
-		msg := "please provide ttl via WithLockTTL()"
-
-		if m.logger != nil {
-			m.logger.Errorf("unable to cast to time.Duration %v, "+msg, key)
-		}
-		if m.slogLogger != nil {
-			m.slogLogger.ErrorContext(ctx, "unable to cast to time.Duration, "+msg, dcron.SlogKeyTaskName, key)
-		}
-
-		return false, nil, errors.New("unable to cast redis ttl, " + msg)
-	}
-
-	if duration == 0 {
-		if m.logger != nil {
-			m.logger.Errorf("bad zero expiration %v", key)
-		}
-		if m.slogLogger != nil {
-			m.slogLogger.ErrorContext(ctx, "bad zero expiration", dcron.SlogKeyTaskName, key)
-		}
-		return false, nil, errors.New("zero redis ttl")
+		return false, nil, errors.New("unable to cast redis ttl, " + missedDurationMsg)
 	}
 
 	locked, err := m.client.SetNX(ctx, key, value, duration).Result()
@@ -63,7 +59,7 @@ func (m *RedisLock) Lock(ctx context.Context, jobSettings any, key, value string
 	return locked, nil, nil
 }
 
-func (m *RedisLock) Unlock(ctx context.Context, jobSettings any, key, value string, lockValue any) error {
+func (m *RedisLock) Unlock(ctx context.Context, jobSettings any, key, value string, lockInstance any) error {
 	return m.client.Del(ctx, key).Err()
 }
 
